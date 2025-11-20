@@ -1,6 +1,9 @@
 (function() {
   'use strict';
 
+  // ============================================================================
+  // Configuration
+  // ============================================================================
   const CONFIG = {
     API_BASE_URL: 'https://www.tcmb.gov.tr/kurlar',
     POPULAR_CURRENCIES: ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'RUB', 'CNY', 'SAR', 'AED'],
@@ -10,6 +13,10 @@
       API_PATH: 'YYYYMM/DDMMYYYY'
     },
     DECIMAL_PLACES: 4,
+    STORAGE_KEYS: {
+      SELECTED_CURRENCIES: 'selectedCurrencies',
+      IS_INITIALIZED: 'isInitialized'
+    },
     UI_IDS: {
       DATE_INPUT: 'dateInput',
       TODAY_BTN: 'todayBtn',
@@ -31,7 +38,283 @@
     }
   };
 
-  class CurrencyService {
+  // ============================================================================
+  // Storage Abstraction Layer
+  // ============================================================================
+  class StorageService {
+    constructor() {
+      this._storage = this._getStorage();
+    }
+
+    _getStorage() {
+      if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
+        return chrome.storage.local;
+      }
+      return null;
+    }
+
+    async get(keys) {
+      if (!this._storage) {
+        throw new Error('Storage API is not available');
+      }
+      return await this._storage.get(keys);
+    }
+
+    async set(data) {
+      if (!this._storage) {
+        throw new Error('Storage API is not available');
+      }
+      return await this._storage.set(data);
+    }
+
+    isAvailable() {
+      return this._storage !== null;
+    }
+  }
+
+  // ============================================================================
+  // Repository Pattern: Filter Data Management
+  // ============================================================================
+  class FilterRepository {
+    constructor(storageService) {
+      this._storage = storageService;
+      this._selectedCurrencies = new Set();
+    }
+
+    async load() {
+      if (!this._storage.isAvailable()) {
+        return new Set();
+      }
+
+      try {
+        const result = await this._storage.get([CONFIG.STORAGE_KEYS.SELECTED_CURRENCIES]);
+        const currencies = result[CONFIG.STORAGE_KEYS.SELECTED_CURRENCIES];
+        
+        if (Array.isArray(currencies)) {
+          return new Set(currencies);
+        }
+        return new Set();
+      } catch (error) {
+        console.error('Failed to load filters:', error);
+        return new Set();
+      }
+    }
+
+    async save(selectedCurrencies) {
+      if (!this._storage.isAvailable()) {
+        return false;
+      }
+
+      try {
+        const currenciesArray = Array.from(selectedCurrencies);
+        await this._storage.set({ 
+          [CONFIG.STORAGE_KEYS.SELECTED_CURRENCIES]: currenciesArray 
+        });
+        this._selectedCurrencies = new Set(selectedCurrencies);
+        return true;
+      } catch (error) {
+        console.error('Failed to save filters:', error);
+        return false;
+      }
+    }
+
+    async isInitialized() {
+      if (!this._storage.isAvailable()) {
+        return false;
+      }
+
+      try {
+        const result = await this._storage.get([CONFIG.STORAGE_KEYS.IS_INITIALIZED]);
+        return result[CONFIG.STORAGE_KEYS.IS_INITIALIZED] === true;
+      } catch (error) {
+        console.error('Failed to check initialization status:', error);
+        return false;
+      }
+    }
+
+    async markAsInitialized() {
+      if (!this._storage.isAvailable()) {
+        return false;
+      }
+
+      try {
+        await this._storage.set({ 
+          [CONFIG.STORAGE_KEYS.IS_INITIALIZED]: true 
+        });
+        return true;
+      } catch (error) {
+        console.error('Failed to mark as initialized:', error);
+        return false;
+      }
+    }
+
+    getSelected() {
+      return new Set(this._selectedCurrencies);
+    }
+
+    setSelected(selectedCurrencies) {
+      this._selectedCurrencies = new Set(selectedCurrencies);
+    }
+  }
+
+  // ============================================================================
+  // Business Logic: Filter Management
+  // ============================================================================
+  class FilterService {
+    constructor(filterRepository) {
+      this._repository = filterRepository;
+      this._allCurrencies = [];
+    }
+
+    setCurrencies(currencies) {
+      this._allCurrencies = currencies;
+    }
+
+    async initialize(currencies) {
+      this.setCurrencies(currencies);
+      
+      const isInitialized = await this._repository.isInitialized();
+      
+      if (!isInitialized) {
+        return await this._initializeFirstTime(currencies);
+      }
+      
+      return await this._loadExistingFilters(currencies);
+    }
+
+    async _initializeFirstTime(currencies) {
+      const allCodes = new Set(currencies.map(c => c.code));
+      this._repository.setSelected(allCodes);
+      
+      await Promise.all([
+        this._repository.save(allCodes),
+        this._repository.markAsInitialized()
+      ]);
+      
+      return allCodes;
+    }
+
+    async _loadExistingFilters(currencies) {
+      const savedFilters = await this._repository.load();
+      const validCodes = new Set(currencies.map(c => c.code));
+      
+      // Filter out invalid currency codes
+      const filtered = Array.from(savedFilters).filter(code => validCodes.has(code));
+      const filteredSet = new Set(filtered);
+      
+      // If no valid filters or all were invalid, select all
+      if (filteredSet.size === 0) {
+        const allCodes = new Set(currencies.map(c => c.code));
+        this._repository.setSelected(allCodes);
+        await this._repository.save(allCodes);
+        return allCodes;
+      }
+      
+      this._repository.setSelected(filteredSet);
+      
+      // Save if filters were modified
+      if (filteredSet.size !== savedFilters.size) {
+        await this._repository.save(filteredSet);
+      }
+      
+      return filteredSet;
+    }
+
+    async selectAll() {
+      const allCodes = new Set(this._allCurrencies.map(c => c.code));
+      this._repository.setSelected(allCodes);
+      await this._repository.save(allCodes);
+    }
+
+    async deselectAll() {
+      const emptySet = new Set();
+      this._repository.setSelected(emptySet);
+      await this._repository.save(emptySet);
+    }
+
+    async toggle(currencyCode) {
+      const current = this._repository.getSelected();
+      
+      if (current.has(currencyCode)) {
+        current.delete(currencyCode);
+      } else {
+        current.add(currencyCode);
+      }
+      
+      this._repository.setSelected(current);
+      await this._repository.save(current);
+    }
+
+    isSelected(currencyCode) {
+      return this._repository.getSelected().has(currencyCode);
+    }
+
+    filter(currencies, searchTerm = '') {
+      const selected = this._repository.getSelected();
+      const term = searchTerm.toLowerCase().trim();
+      
+      return currencies.filter(currency => {
+        // Apply currency filter
+        if (selected.size > 0 && !selected.has(currency.code)) {
+          return false;
+        }
+        
+        // Apply search filter
+        if (term) {
+          const code = currency.code.toLowerCase();
+          const name = currency.name.toLowerCase();
+          return code.includes(term) || name.includes(term);
+        }
+        
+        return true;
+      });
+    }
+
+    getAllCurrencies() {
+      return this._allCurrencies;
+    }
+  }
+
+  // ============================================================================
+  // Domain Models
+  // ============================================================================
+  class Currency {
+    constructor(data) {
+      this.code = data.code;
+      this.name = data.name;
+      this.buying = parseFloat(data.buying);
+      this.selling = parseFloat(data.selling);
+      this.banknoteBuying = parseFloat(data.banknoteBuying);
+      this.banknoteSelling = parseFloat(data.banknoteSelling);
+      this.unit = parseInt(data.unit, 10);
+      this.yesterdayBuying = data.yesterdayBuying ?? null;
+      this.yesterdaySelling = data.yesterdaySelling ?? null;
+    }
+
+    getDisplayCode() {
+      return this.unit > 1 ? `${this.code} (${this.unit})` : this.code;
+    }
+
+    getBuyingChange() {
+      return this._getChangeIndicator(this.buying, this.yesterdayBuying);
+    }
+
+    getSellingChange() {
+      return this._getChangeIndicator(this.selling, this.yesterdaySelling);
+    }
+
+    _getChangeIndicator(today, yesterday) {
+      if (!yesterday || yesterday === 0) return '';
+      if (today > yesterday) return 'increase';
+      if (today < yesterday) return 'decrease';
+      return '';
+    }
+  }
+
+  // ============================================================================
+  // Data Access Layer: Currency API
+  // ============================================================================
+  class CurrencyApiService {
     static buildApiUrl(date = null) {
       if (!date) {
         return `${CONFIG.API_BASE_URL}/today.xml`;
@@ -63,15 +346,15 @@
         const unit = node.querySelector('Unit')?.textContent || '1';
 
         if (code && (buying !== '0' || selling !== '0')) {
-          currencies.push({
+          currencies.push(new Currency({
             code,
             name,
-            buying: parseFloat(buying),
-            selling: parseFloat(selling),
-            banknoteBuying: parseFloat(banknoteBuying),
-            banknoteSelling: parseFloat(banknoteSelling),
-            unit: parseInt(unit, 10)
-          });
+            buying,
+            selling,
+            banknoteBuying,
+            banknoteSelling,
+            unit
+          }));
         }
       });
 
@@ -81,11 +364,9 @@
     static mergeWithPreviousDay(todayData, yesterdayData) {
       return todayData.map(today => {
         const yesterday = yesterdayData.find(y => y.code === today.code);
-        return {
-          ...today,
-          yesterdayBuying: yesterday?.buying ?? null,
-          yesterdaySelling: yesterday?.selling ?? null
-        };
+        today.yesterdayBuying = yesterday?.buying ?? null;
+        today.yesterdaySelling = yesterday?.selling ?? null;
+        return today;
       });
     }
 
@@ -96,6 +377,9 @@
     }
   }
 
+  // ============================================================================
+  // Utility Classes
+  // ============================================================================
   class DateFormatter {
     static formatTcmbDate(dateString) {
       if (!dateString) return null;
@@ -133,12 +417,15 @@
     }
   }
 
+  // ============================================================================
+  // Presentation Layer: UI Management
+  // ============================================================================
   class UIManager {
     constructor() {
-      this.elements = this.initializeElements();
+      this._elements = this._initializeElements();
     }
 
-    initializeElements() {
+    _initializeElements() {
       const ids = CONFIG.UI_IDS;
       return {
         dateInput: document.getElementById(ids.DATE_INPUT),
@@ -161,110 +448,54 @@
       };
     }
 
+    get elements() {
+      return this._elements;
+    }
+
     showLoading() {
-      this.elements.loading.style.display = 'flex';
-      this.elements.ratesTable.style.display = 'none';
-      this.elements.searchContainer.style.display = 'none';
-      this.elements.error.style.display = 'none';
-      this.elements.lastUpdate.textContent = 'Yükleniyor...';
+      this._elements.loading.style.display = 'flex';
+      this._elements.ratesTable.style.display = 'none';
+      this._elements.searchContainer.style.display = 'none';
+      this._elements.error.style.display = 'none';
+      this._elements.lastUpdate.textContent = 'Yükleniyor...';
     }
 
     hideLoading() {
-      this.elements.loading.style.display = 'none';
+      this._elements.loading.style.display = 'none';
     }
 
     showError(message) {
-      this.elements.error.style.display = 'block';
-      this.elements.lastUpdate.textContent = message;
+      this._elements.error.style.display = 'block';
+      this._elements.lastUpdate.textContent = message;
     }
 
     updateLastUpdate(dateString) {
-      this.elements.lastUpdate.textContent = `Son güncelleme: ${dateString}`;
+      this._elements.lastUpdate.textContent = `Son güncelleme: ${dateString}`;
     }
 
     showTable() {
-      this.elements.ratesTable.style.display = 'table';
-      this.elements.searchContainer.style.display = 'block';
+      this._elements.ratesTable.style.display = 'table';
+      this._elements.searchContainer.style.display = 'block';
     }
 
     clearSearch() {
-      this.elements.searchInput.value = '';
+      this._elements.searchInput.value = '';
     }
 
     clearTable() {
-      this.elements.currencies.innerHTML = '';
+      this._elements.currencies.innerHTML = '';
     }
   }
 
-  class FilterManager {
-    constructor() {
-      this.selectedCurrencies = new Set();
-      this.allCurrencies = [];
-    }
-
-    initialize(currencies) {
-      this.allCurrencies = currencies;
-      if (this.selectedCurrencies.size === 0) {
-        currencies.forEach(c => this.selectedCurrencies.add(c.code));
-      }
-    }
-
-    selectAll() {
-      this.allCurrencies.forEach(c => this.selectedCurrencies.add(c.code));
-    }
-
-    deselectAll() {
-      this.selectedCurrencies.clear();
-    }
-
-    toggle(currencyCode) {
-      if (this.selectedCurrencies.has(currencyCode)) {
-        this.selectedCurrencies.delete(currencyCode);
-      } else {
-        this.selectedCurrencies.add(currencyCode);
-      }
-    }
-
-    isSelected(currencyCode) {
-      return this.selectedCurrencies.has(currencyCode);
-    }
-
-    filter(currencies, searchTerm = '') {
-      const term = searchTerm.toLowerCase().trim();
-      
-      return currencies.filter(currency => {
-        if (this.selectedCurrencies.size > 0 && !this.selectedCurrencies.has(currency.code)) {
-          return false;
-        }
-
-        if (term) {
-          const code = currency.code.toLowerCase();
-          const name = currency.name.toLowerCase();
-          return code.includes(term) || name.includes(term);
-        }
-
-        return true;
-      });
-    }
-  }
-
+  // ============================================================================
+  // Presentation Layer: Currency Rendering
+  // ============================================================================
   class CurrencyRenderer {
-    static getChangeIndicator(today, yesterday) {
-      if (!yesterday || yesterday === 0) return '';
-      if (today > yesterday) return 'increase';
-      if (today < yesterday) return 'decrease';
-      return '';
-    }
-
-    static formatCurrencyDisplay(currency) {
-      return currency.unit > 1 ? `${currency.code} (${currency.unit})` : currency.code;
-    }
-
     static renderRow(currency) {
       const isPopular = CONFIG.POPULAR_CURRENCIES.includes(currency.code);
-      const currencyDisplay = this.formatCurrencyDisplay(currency);
-      const buyingChange = this.getChangeIndicator(currency.buying, currency.yesterdayBuying);
-      const sellingChange = this.getChangeIndicator(currency.selling, currency.yesterdaySelling);
+      const currencyDisplay = currency.getDisplayCode();
+      const buyingChange = currency.getBuyingChange();
+      const sellingChange = currency.getSellingChange();
 
       const yesterdayBuyingHtml = currency.yesterdayBuying !== null
         ? `<span class="yesterday-value ${buyingChange}">(${NumberFormatter.format(currency.yesterdayBuying)})</span>`
@@ -311,8 +542,11 @@
     }
   }
 
+  // ============================================================================
+  // Presentation Layer: Filter Rendering
+  // ============================================================================
   class FilterRenderer {
-    static renderCheckboxes(currencies, filterManager, onToggle) {
+    static renderCheckboxes(currencies, filterService, onToggle) {
       const container = document.getElementById(CONFIG.UI_IDS.FILTER_CHECKBOXES);
       container.innerHTML = '';
 
@@ -323,9 +557,9 @@
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = currency.code;
-        checkbox.checked = filterManager.isSelected(currency.code);
-        checkbox.addEventListener('change', () => {
-          filterManager.toggle(currency.code);
+        checkbox.checked = filterService.isSelected(currency.code);
+        checkbox.addEventListener('change', async () => {
+          await filterService.toggle(currency.code);
           onToggle();
         });
 
@@ -335,14 +569,17 @@
       });
     }
 
-    static updateCheckboxes(filterManager) {
+    static updateCheckboxes(filterService) {
       const checkboxes = document.querySelectorAll(`#${CONFIG.UI_IDS.FILTER_CHECKBOXES} input[type="checkbox"]`);
       checkboxes.forEach(checkbox => {
-        checkbox.checked = filterManager.isSelected(checkbox.value);
+        checkbox.checked = filterService.isSelected(checkbox.value);
       });
     }
   }
 
+  // ============================================================================
+  // Presentation Layer: Modal Management
+  // ============================================================================
   class ModalManager {
     static open() {
       document.getElementById(CONFIG.UI_IDS.FILTER_MODAL).style.display = 'block';
@@ -353,103 +590,116 @@
     }
   }
 
+  // ============================================================================
+  // Application Layer: Main Application
+  // ============================================================================
   class ExchangeRateApp {
     constructor() {
-      this.ui = new UIManager();
-      this.filterManager = new FilterManager();
-      this.initializeEventListeners();
-      this.initializeDateInput();
-      this.loadRates();
+      // Dependency Injection
+      const storageService = new StorageService();
+      const filterRepository = new FilterRepository(storageService);
+      const filterService = new FilterService(filterRepository);
+      
+      this._ui = new UIManager();
+      this._filterService = filterService;
+      
+      this._initialize();
     }
 
-    initializeDateInput() {
+    _initialize() {
+      this._initializeDateInput();
+      this._initializeEventListeners();
+      this._loadRates();
+    }
+
+    _initializeDateInput() {
       const today = DateFormatter.getTodayString();
-      this.ui.elements.dateInput.value = today;
-      this.ui.elements.dateInput.max = today;
+      this._ui.elements.dateInput.value = today;
+      this._ui.elements.dateInput.max = today;
     }
 
-    initializeEventListeners() {
-      this.ui.elements.dateInput.addEventListener('change', (e) => {
+    _initializeEventListeners() {
+      this._ui.elements.dateInput.addEventListener('change', (e) => {
         const date = e.target.value ? new Date(e.target.value) : null;
-        this.loadRates(date);
+        this._loadRates(date);
       });
 
-      this.ui.elements.todayBtn.addEventListener('click', () => {
+      this._ui.elements.todayBtn.addEventListener('click', () => {
         const today = DateFormatter.getTodayString();
-        this.ui.elements.dateInput.value = today;
-        this.loadRates(null);
+        this._ui.elements.dateInput.value = today;
+        this._loadRates(null);
       });
 
-      this.ui.elements.retryBtn.addEventListener('click', () => {
-        const date = this.ui.elements.dateInput.value ? new Date(this.ui.elements.dateInput.value) : null;
-        this.loadRates(date);
+      this._ui.elements.retryBtn.addEventListener('click', () => {
+        const date = this._ui.elements.dateInput.value ? new Date(this._ui.elements.dateInput.value) : null;
+        this._loadRates(date);
       });
 
-      this.ui.elements.searchInput.addEventListener('input', () => {
-        this.applyFilters();
+      this._ui.elements.searchInput.addEventListener('input', () => {
+        this._applyFilters();
       });
 
-      this.ui.elements.settingsBtn.addEventListener('click', () => {
+      this._ui.elements.settingsBtn.addEventListener('click', () => {
         ModalManager.open();
       });
 
-      this.ui.elements.closeFilterBtn.addEventListener('click', () => {
+      this._ui.elements.closeFilterBtn.addEventListener('click', () => {
         ModalManager.close();
       });
 
-      this.ui.elements.filterModalOverlay.addEventListener('click', () => {
+      this._ui.elements.filterModalOverlay.addEventListener('click', () => {
         ModalManager.close();
       });
 
-      this.ui.elements.selectAllBtn.addEventListener('click', () => {
-        this.filterManager.selectAll();
-        FilterRenderer.updateCheckboxes(this.filterManager);
-        this.applyFilters();
+      this._ui.elements.selectAllBtn.addEventListener('click', async () => {
+        await this._filterService.selectAll();
+        FilterRenderer.updateCheckboxes(this._filterService);
+        this._applyFilters();
       });
 
-      this.ui.elements.deselectAllBtn.addEventListener('click', () => {
-        this.filterManager.deselectAll();
-        FilterRenderer.updateCheckboxes(this.filterManager);
-        this.applyFilters();
+      this._ui.elements.deselectAllBtn.addEventListener('click', async () => {
+        await this._filterService.deselectAll();
+        FilterRenderer.updateCheckboxes(this._filterService);
+        this._applyFilters();
       });
     }
 
-    async loadRates(selectedDate = null) {
-      this.ui.showLoading();
-      this.ui.clearSearch();
-      this.ui.clearTable();
+    async _loadRates(selectedDate = null) {
+      this._ui.showLoading();
+      this._ui.clearSearch();
+      this._ui.clearTable();
 
       try {
         const today = selectedDate || new Date();
         const yesterday = DateFormatter.getPreviousDay(today);
 
         const [todayResponse, yesterdayResponse] = await Promise.all([
-          fetch(CurrencyService.buildApiUrl(selectedDate ? today : null)),
-          fetch(CurrencyService.buildApiUrl(yesterday))
+          fetch(CurrencyApiService.buildApiUrl(selectedDate ? today : null)),
+          fetch(CurrencyApiService.buildApiUrl(yesterday))
         ]);
 
         if (!todayResponse.ok) {
           throw new Error(`HTTP ${todayResponse.status}`);
         }
 
-        const todayXml = CurrencyService.parseXmlResponse(await todayResponse.text());
-        const todayData = CurrencyService.extractCurrencyData(todayXml);
+        const todayXml = CurrencyApiService.parseXmlResponse(await todayResponse.text());
+        const todayData = CurrencyApiService.extractCurrencyData(todayXml);
 
         let yesterdayData = [];
         if (yesterdayResponse.ok) {
           try {
-            const yesterdayXml = CurrencyService.parseXmlResponse(await yesterdayResponse.text());
-            yesterdayData = CurrencyService.extractCurrencyData(yesterdayXml);
+            const yesterdayXml = CurrencyApiService.parseXmlResponse(await yesterdayResponse.text());
+            yesterdayData = CurrencyApiService.extractCurrencyData(yesterdayXml);
           } catch (e) {
             console.warn('Previous day data unavailable', e);
           }
         }
 
-        const mergedData = CurrencyService.mergeWithPreviousDay(todayData, yesterdayData);
-        const sortedData = CurrencyService.sortByPopularity(mergedData);
+        const mergedData = CurrencyApiService.mergeWithPreviousDay(todayData, yesterdayData);
+        const sortedData = CurrencyApiService.sortByPopularity(mergedData);
 
-        this.filterManager.initialize(sortedData);
-        FilterRenderer.renderCheckboxes(sortedData, this.filterManager, () => this.applyFilters());
+        await this._filterService.initialize(sortedData);
+        FilterRenderer.renderCheckboxes(sortedData, this._filterService, () => this._applyFilters());
 
         const dateAttr = todayXml.querySelector('Tarih_Date')?.getAttribute('Tarih') || 
                          todayXml.querySelector('Tarih_Date')?.getAttribute('Date');
@@ -460,26 +710,30 @@
                                year: 'numeric'
                              });
 
-        this.ui.updateLastUpdate(formattedDate);
-        this.applyFilters();
-        this.ui.showTable();
-        this.ui.hideLoading();
+        this._ui.updateLastUpdate(formattedDate);
+        this._applyFilters();
+        this._ui.showTable();
+        this._ui.hideLoading();
 
       } catch (error) {
         console.error('Failed to load exchange rates:', error);
-        this.ui.hideLoading();
-        this.ui.showError('Hata oluştu');
+        this._ui.hideLoading();
+        this._ui.showError('Hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
       }
     }
 
-    applyFilters() {
-      const searchTerm = this.ui.elements.searchInput.value;
-      const filtered = this.filterManager.filter(this.filterManager.allCurrencies, searchTerm);
-      CurrencyRenderer.renderTable(filtered, this.ui.elements.currencies);
-      this.ui.showTable();
+    _applyFilters() {
+      const searchTerm = this._ui.elements.searchInput.value;
+      const allCurrencies = this._filterService.getAllCurrencies();
+      const filtered = this._filterService.filter(allCurrencies, searchTerm);
+      CurrencyRenderer.renderTable(filtered, this._ui.elements.currencies);
+      this._ui.showTable();
     }
   }
 
+  // ============================================================================
+  // Application Bootstrap
+  // ============================================================================
   document.addEventListener('DOMContentLoaded', () => {
     new ExchangeRateApp();
   });

@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Türkiye Cumhuriyet Merkez Bankası alış ve satış kurlarını gösterir",
   "permissions": [
+    "storage",
     "https://www.tcmb.gov.tr/*"
   ],
   "host_permissions": [
