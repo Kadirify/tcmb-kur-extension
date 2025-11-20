@@ -13,11 +13,13 @@
       API_PATH: 'YYYYMM/DDMMYYYY'
     },
     DECIMAL_PLACES: 4,
+    DEFAULT_LANGUAGE: 'tr',
     STORAGE_KEYS: {
       SELECTED_CURRENCIES: 'selectedCurrencies',
       IS_INITIALIZED: 'isInitialized',
       FAVORITE_CURRENCIES: 'favoriteCurrencies',
-      THEME: 'theme'
+      THEME: 'theme',
+      LANGUAGE: 'language'
     },
     UI_IDS: {
       DATE_INPUT: 'dateInput',
@@ -27,6 +29,7 @@
       SETTINGS_BTN: 'settingsBtn',
       EXPORT_BTN: 'exportBtn',
       THEME_BTN: 'themeBtn',
+      LANGUAGE_BTN: 'languageBtn',
       CLOSE_FILTER_BTN: 'closeFilterBtn',
       FILTER_MODAL_OVERLAY: 'filterModalOverlay',
       SELECT_ALL_BTN: 'selectAllBtn',
@@ -392,6 +395,7 @@
     constructor(data) {
       this.code = data.code;
       this.name = data.name;
+      this.originalName = data.name;
       this.buying = parseFloat(data.buying);
       this.selling = parseFloat(data.selling);
       this.banknoteBuying = parseFloat(data.banknoteBuying);
@@ -399,6 +403,15 @@
       this.unit = parseInt(data.unit, 10);
       this.yesterdayBuying = data.yesterdayBuying ?? null;
       this.yesterdaySelling = data.yesterdaySelling ?? null;
+    }
+
+    getTranslatedName(languageService) {
+      if (!languageService || languageService.getCurrentLanguage() === 'tr') {
+        return this.originalName;
+      }
+      
+      const translations = languageService.t('currencyNames');
+      return translations[this.originalName] || this.originalName;
     }
 
     getDisplayCode() {
@@ -488,18 +501,29 @@
   }
 
   class ExportService {
-    static exportToExcel(currencies, dateString = null) {
+    static exportToExcel(currencies, dateString = null, languageService = null) {
+      const t = (key) => languageService ? languageService.t(key) : key;
+      
       if (!currencies || currencies.length === 0) {
-        throw new Error('Export için döviz verisi bulunamadı');
+        throw new Error(t('exportNoData'));
       }
 
       if (typeof XLSX === 'undefined') {
-        throw new Error('Excel kütüphanesi yüklenemedi');
+        throw new Error(t('exportLibraryError'));
       }
 
       const date = dateString || new Date().toISOString().split('T')[0];
+      const filePrefix = t('exportFilePrefix');
 
-      const headers = ['Döviz Kodu', 'Döviz Adı', 'Birim', 'Alış', 'Satış', 'Banknot Alış', 'Banknot Satış'];
+      const headers = [
+        t('excelHeaders.code'),
+        t('excelHeaders.name'),
+        t('excelHeaders.unit'),
+        t('excelHeaders.buying'),
+        t('excelHeaders.selling'),
+        t('excelHeaders.banknoteBuying'),
+        t('excelHeaders.banknoteSelling')
+      ];
       const data = [headers];
 
       currencies.forEach(currency => {
@@ -541,10 +565,83 @@
       }
 
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'TCMB Döviz Kurları');
+      const sheetName = languageService && languageService.getCurrentLanguage() === 'en' 
+        ? 'CBRT Exchange Rates' 
+        : 'TCMB Döviz Kurları';
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-      const fileName = `tcmb-doviz-kurlari-${date}.xlsx`;
+      const fileName = `${filePrefix}-${date}.xlsx`;
       XLSX.writeFile(wb, fileName);
+    }
+  }
+
+  // ============================================================================
+  // Business Logic: Language Management
+  // ============================================================================
+  class LanguageService {
+    constructor(storageService) {
+      this._storage = storageService;
+      this._currentLanguage = CONFIG.DEFAULT_LANGUAGE;
+      this._translations = null;
+    }
+
+    async initialize() {
+      try {
+        const result = await this._storage.get([CONFIG.STORAGE_KEYS.LANGUAGE]);
+        const savedLanguage = result[CONFIG.STORAGE_KEYS.LANGUAGE];
+        const language = savedLanguage || CONFIG.DEFAULT_LANGUAGE;
+        this.setLanguage(language);
+      } catch (error) {
+        console.error('Failed to load language from storage:', error);
+        this.setLanguage(CONFIG.DEFAULT_LANGUAGE);
+      }
+    }
+
+    setLanguage(languageCode) {
+      if (!LANGUAGES[languageCode]) {
+        console.error('Language not found:', languageCode);
+        languageCode = CONFIG.DEFAULT_LANGUAGE;
+      }
+
+      this._currentLanguage = languageCode;
+      this._translations = LANGUAGES[languageCode].translations;
+
+      this._storage.set({ [CONFIG.STORAGE_KEYS.LANGUAGE]: languageCode }).catch(error => {
+        console.error('Failed to save language to storage:', error);
+      });
+    }
+
+    async toggle() {
+      const newLanguage = this._currentLanguage === 'tr' ? 'en' : 'tr';
+      this.setLanguage(newLanguage);
+      return newLanguage;
+    }
+
+    getCurrentLanguage() {
+      return this._currentLanguage;
+    }
+
+    t(key) {
+      const keys = key.split('.');
+      let value = this._translations;
+
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = value[k];
+        } else {
+          console.warn('Translation key not found:', key);
+          return key;
+        }
+      }
+
+      return value || key;
+    }
+
+    getAvailableLanguages() {
+      return Object.keys(LANGUAGES).map(code => ({
+        code,
+        name: LANGUAGES[code].name
+      }));
     }
   }
 
@@ -653,6 +750,7 @@
         settingsBtn: document.getElementById(ids.SETTINGS_BTN),
         exportBtn: document.getElementById(ids.EXPORT_BTN),
         themeBtn: document.getElementById(ids.THEME_BTN),
+        languageBtn: document.getElementById(ids.LANGUAGE_BTN),
         closeFilterBtn: document.getElementById(ids.CLOSE_FILTER_BTN),
         filterModalOverlay: document.getElementById(ids.FILTER_MODAL_OVERLAY),
         selectAllBtn: document.getElementById(ids.SELECT_ALL_BTN),
@@ -677,7 +775,6 @@
       this._elements.ratesTable.style.display = 'none';
       this._elements.searchContainer.style.display = 'none';
       this._elements.error.style.display = 'none';
-      this._elements.lastUpdate.textContent = 'Yükleniyor...';
     }
 
     hideLoading() {
@@ -689,8 +786,8 @@
       this._elements.lastUpdate.textContent = message;
     }
 
-    updateLastUpdate(dateString) {
-      this._elements.lastUpdate.textContent = `Son güncelleme: ${dateString}`;
+    updateLastUpdate(message) {
+      this._elements.lastUpdate.textContent = message;
     }
 
     showTable() {
@@ -711,10 +808,11 @@
   // Presentation Layer: Currency Rendering
   // ============================================================================
   class CurrencyRenderer {
-    static renderRow(currency, favoriteService, onFavoriteToggle) {
+    static renderRow(currency, favoriteService, onFavoriteToggle, languageService) {
       const isPopular = CONFIG.POPULAR_CURRENCIES.includes(currency.code);
       const isFavorite = favoriteService ? favoriteService.isFavorite(currency.code) : false;
       const currencyDisplay = currency.getDisplayCode();
+      const currencyName = currency.getTranslatedName(languageService);
       const buyingChange = currency.getBuyingChange();
       const sellingChange = currency.getSellingChange();
 
@@ -728,7 +826,9 @@
 
       const favoriteIcon = isFavorite ? '★' : '☆';
       const favoriteClass = isFavorite ? 'favorite' : '';
-      const favoriteTitle = isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle';
+      const favoriteTitle = languageService 
+        ? (isFavorite ? languageService.t('removeFromFavorites') : languageService.t('addToFavorites'))
+        : (isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle');
 
       const row = document.createElement('tr');
       if (isPopular) {
@@ -743,7 +843,7 @@
           <div class="currency-header">
             <div class="currency-info">
           <span class="currency-code">${currencyDisplay}</span>
-          <span class="currency-name">${currency.name}</span>
+          <span class="currency-name">${currencyName}</span>
             </div>
             ${favoriteService ? `<button class="favorite-btn ${favoriteClass}" data-currency="${currency.code}" title="${favoriteTitle}">${favoriteIcon}</button>` : ''}
           </div>
@@ -773,11 +873,12 @@
       return row;
     }
 
-    static renderTable(currencies, container, favoriteService = null, onFavoriteToggle = null) {
+    static renderTable(currencies, container, favoriteService = null, onFavoriteToggle = null, languageService = null) {
       container.innerHTML = '';
 
       if (currencies.length === 0) {
-        container.innerHTML = '<tr><td colspan="3" class="no-data">Döviz kuru bulunamadı.</td></tr>';
+        const noDataText = languageService ? languageService.t('noData') : 'Döviz kuru bulunamadı.';
+        container.innerHTML = `<tr><td colspan="3" class="no-data">${noDataText}</td></tr>`;
         return;
       }
 
@@ -790,7 +891,7 @@
       const sortedCurrencies = [...favoriteCurrencies, ...otherCurrencies];
 
       sortedCurrencies.forEach(currency => {
-        container.appendChild(this.renderRow(currency, favoriteService, onFavoriteToggle));
+        container.appendChild(this.renderRow(currency, favoriteService, onFavoriteToggle, languageService));
       });
     }
   }
@@ -855,19 +956,24 @@
       const favoriteRepository = new FavoriteRepository(storageService);
       const favoriteService = new FavoriteService(favoriteRepository);
       const themeService = new ThemeService(storageService);
+      const languageService = new LanguageService(storageService);
       
       this._ui = new UIManager();
       this._filterService = filterService;
       this._favoriteService = favoriteService;
       this._themeService = themeService;
+      this._languageService = languageService;
+      this._lastUpdateData = null;
       
       this._initialize();
     }
 
     async _initialize() {
       this._initializeDateInput();
+      await this._languageService.initialize();
       await this._themeService.initialize();
       await this._favoriteService.initialize();
+      this._updateUITexts();
       this._initializeEventListeners();
       this._loadRates();
     }
@@ -876,6 +982,71 @@
       const today = DateFormatter.getTodayString();
       this._ui.elements.dateInput.value = today;
       this._ui.elements.dateInput.max = today;
+    }
+
+    _updateUITexts() {
+      const t = (key) => this._languageService.t(key);
+      
+      // Header
+      document.querySelector('h1').textContent = t('title');
+      document.querySelector('.date-label').textContent = t('dateLabel');
+      this._ui.elements.todayBtn.textContent = t('todayBtn');
+      
+      // Last Update (mevcut tarih varsa yeniden çevir)
+      if (this._lastUpdateData) {
+        const { dateString, isToday } = this._lastUpdateData;
+        const displayMessage = isToday 
+          ? `${t('lastUpdate')} ${dateString}` 
+          : `${t('lastUpdate')} ${dateString} ${t('ratesNotPublished')}`;
+        this._ui.updateLastUpdate(displayMessage);
+      }
+      
+      // Buttons
+      if (this._ui.elements.themeBtn) {
+        this._ui.elements.themeBtn.setAttribute('title', t('themeToggle'));
+      }
+      if (this._ui.elements.exportBtn) {
+        this._ui.elements.exportBtn.setAttribute('title', t('exportBtn'));
+      }
+      if (this._ui.elements.settingsBtn) {
+        this._ui.elements.settingsBtn.setAttribute('title', t('settingsBtn'));
+      }
+      if (this._ui.elements.languageBtn) {
+        const langFlag = this._ui.elements.languageBtn.querySelector('.language-flag');
+        if (langFlag) {
+          langFlag.textContent = this._languageService.getCurrentLanguage() === 'tr' ? '🇹🇷' : '🇬🇧';
+        }
+        this._ui.elements.languageBtn.setAttribute('title', t('languageToggle'));
+      }
+      
+      // Search
+      this._ui.elements.searchInput.setAttribute('placeholder', t('searchPlaceholder'));
+      
+      // Filter Modal
+      document.querySelector('.filter-modal-header h2').textContent = t('filterModalTitle');
+      this._ui.elements.selectAllBtn.textContent = t('selectAllBtn');
+      this._ui.elements.deselectAllBtn.textContent = t('deselectAllBtn');
+      
+      // Table Headers
+      const headers = document.querySelectorAll('.rates-table th');
+      if (headers[0]) headers[0].textContent = t('currencyHeader');
+      if (headers[1]) headers[1].textContent = t('buyingHeader');
+      if (headers[2]) headers[2].textContent = t('sellingHeader');
+      
+      // Error
+      const errorP = document.querySelector('.error p');
+      if (errorP) errorP.textContent = t('errorMessage');
+      this._ui.elements.retryBtn.textContent = t('retryBtn');
+      
+      // Loading
+      const loadingP = document.querySelector('.loading p');
+      if (loadingP) loadingP.textContent = t('loading');
+      
+      // Footer
+      const footerBy = document.getElementById('footerBy');
+      const footerDeveloped = document.getElementById('footerDeveloped');
+      if (footerBy) footerBy.textContent = t('footerBy');
+      if (footerDeveloped) footerDeveloped.textContent = t('footerDeveloped');
     }
 
     _initializeEventListeners() {
@@ -915,6 +1086,14 @@
         });
       }
 
+      if (this._ui.elements.languageBtn) {
+        this._ui.elements.languageBtn.addEventListener('click', async () => {
+          await this._languageService.toggle();
+          this._updateUITexts();
+          this._applyFilters();
+        });
+      }
+
       this._ui.elements.closeFilterBtn.addEventListener('click', () => {
         ModalManager.close();
       });
@@ -937,7 +1116,9 @@
     }
 
     async _loadRates(selectedDate = null) {
+      const t = (key) => this._languageService.t(key);
       this._ui.showLoading();
+      this._ui.updateLastUpdate(t('loading'));
       this._ui.clearSearch();
       this._ui.clearTable();
 
@@ -983,9 +1164,14 @@
                              });
 
         const isToday = this._isToday(dateAttr);
+        const t = (key) => this._languageService.t(key);
+        
+        // Tarih verisini sakla (dil değiştirirken kullanmak için)
+        this._lastUpdateData = { dateString: formattedDate, isToday };
+        
         const displayMessage = isToday 
-          ? `TCMB Kur Tarihi: ${formattedDate}` 
-          : `TCMB Kur Tarihi: ${formattedDate} (Bugünün kurları henüz yayınlanmadı - TCMB kurları hafta içi 15:30'da güncellenir)`;
+          ? `${t('lastUpdate')} ${formattedDate}` 
+          : `${t('lastUpdate')} ${formattedDate} ${t('ratesNotPublished')}`;
 
         this._ui.updateLastUpdate(displayMessage);
         this._applyFilters();
@@ -995,7 +1181,8 @@
       } catch (error) {
         console.error('Failed to load exchange rates:', error);
         this._ui.hideLoading();
-        this._ui.showError('Hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+        const t = (key) => this._languageService.t(key);
+        this._ui.showError(`${t('errorTitle')}: ${error.message || t('errorMessage')}`);
       }
     }
 
@@ -1007,7 +1194,8 @@
         filtered, 
         this._ui.elements.currencies, 
         this._favoriteService,
-        () => this._applyFilters()
+        () => this._applyFilters(),
+        this._languageService
       );
       this._ui.showTable();
     }
@@ -1031,17 +1219,18 @@
         const searchTerm = this._ui.elements.searchInput.value;
         const allCurrencies = this._filterService.getAllCurrencies();
         const filtered = this._filterService.filter(allCurrencies, searchTerm);
+        const t = (key) => this._languageService.t(key);
         
         if (filtered.length === 0) {
-          alert('Export için görüntülenecek döviz bulunamadı.');
+          alert(t('exportNoData'));
           return;
         }
 
         const dateString = this._ui.elements.dateInput.value;
-        ExportService.exportToExcel(filtered, dateString);
+        ExportService.exportToExcel(filtered, dateString, this._languageService);
       } catch (error) {
         console.error('Export hatası:', error);
-        alert('Export sırasında bir hata oluştu: ' + error.message);
+        alert(`${t('exportError')} ${error.message}`);
       }
     }
   }

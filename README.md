@@ -21,9 +21,10 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
 - **Arama Fonksiyonu**: Döviz kodu veya adına göre hızlı arama
 - **Popüler Döviz Vurgusu**: USD, EUR, GBP gibi popüler dövizler otomatik olarak öne çıkarılır
 - **Dark Mode**: Göz yormayan karanlık tema desteği
+- **Çoklu Dil Desteği**: Türkçe ve İngilizce dil seçenekleri
 - **Modern Tasarım**: Temiz, minimal ve profesyonel arayüz
 - **Hata Yönetimi**: Ağ hatalarında otomatik yeniden deneme mekanizması
-- **Kalıcı Ayarlar**: Filtre ve favori tercihleriniz otomatik olarak kaydedilir
+- **Kalıcı Ayarlar**: Filtre, favori, tema ve dil tercihleriniz otomatik olarak kaydedilir
 
 ### Kullanıcı Deneyimi
 - **Hızlı Erişim**: Tek tıkla tüm kurlara erişim
@@ -110,6 +111,12 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
    - Tema tercihiniz otomatik olarak kaydedilir
    - Göz dostu renkler ve modern gradyanlar
 
+7. **Dil Değiştirme**
+   - Sağ üstteki dil butonu (TR/EN) ile Türkçe ve İngilizce arasında geçiş yapın
+   - Tüm arayüz metinleri, tablo başlıkları ve mesajlar değişir
+   - Excel export dosya isimleri ve içeriği seçili dile göre oluşturulur
+   - Dil tercihiniz kalıcı olarak kaydedilir
+
 ## 🏗️ Mimari ve Teknik Detaylar
 
 ### Teknoloji Stack
@@ -124,15 +131,26 @@ Eklenti, SOLID prensiplerine uygun modüler bir yapıda geliştirilmiştir:
 
 ```
 popup.js
-├── CurrencyService      # API işlemleri ve veri işleme
-├── DateFormatter        # Tarih formatlama işlemleri
-├── NumberFormatter      # Sayı formatlama
-├── UIManager            # DOM yönetimi ve UI durumları
-├── FilterManager        # Filtre mantığı ve state yönetimi
-├── CurrencyRenderer     # Tablo render işlemleri
-├── FilterRenderer       # Filtre UI render
-├── ModalManager         # Modal açma/kapama
-└── ExchangeRateApp     # Ana uygulama sınıfı
+├── StorageService           # Chrome storage abstraction
+├── FilterRepository         # Filtre veri yönetimi
+├── FavoriteRepository       # Favori veri yönetimi
+├── FilterService            # Filtre iş mantığı
+├── FavoriteService          # Favori iş mantığı
+├── LanguageService          # Çoklu dil yönetimi
+├── ThemeService             # Dark mode yönetimi
+├── ExportService            # Excel export
+├── Currency                 # Döviz domain modeli
+├── CurrencyApiService       # TCMB API işlemleri
+├── DateFormatter            # Tarih formatlama
+├── NumberFormatter          # Sayı formatlama
+├── UIManager                # DOM yönetimi
+├── CurrencyRenderer         # Tablo render
+├── FilterRenderer           # Filtre UI render
+├── ModalManager             # Modal yönetimi
+└── ExchangeRateApp          # Ana uygulama sınıfı
+
+languages.js
+└── LANGUAGES                # TR ve EN dil dosyaları
 ```
 
 ### Önemli Özellikler
@@ -155,11 +173,13 @@ API'den gelen veriler parse edilerek kullanıcı dostu bir formatta gösterilir.
 
 ### Proje Yapısı
 ```
-cxcxxc/
+tcmb-kur-extension/
 ├── manifest.json        # Chrome extension manifest
 ├── popup.html          # Ana popup arayüzü
 ├── popup.js            # Ana JavaScript dosyası
 ├── popup.css           # Stil dosyası
+├── languages.js        # Çoklu dil dosyaları (TR, EN)
+├── xlsx.min.js         # SheetJS kütüphanesi
 ├── icons/              # İkon dosyaları (opsiyonel)
 └── README.md           # Bu dosya
 ```
@@ -204,9 +224,11 @@ Kullanıcı belirli bir dövizi arıyor. Arama kutusuna döviz kodunu yazarak an
 - [ ] Bildirim sistemi (belirlenen eşik değerlerde uyarı)
 - [ ] Grafik görünümü (zaman içindeki değişim)
 - [x] Favori dövizler (hızlı erişim için)
-- [x] Export özelliği (CSV/Excel)
-- [ ] Çoklu dil desteği
+- [x] Export özelliği (Excel .xlsx)
+- [x] Çoklu dil desteği (TR/EN)
 - [x] Dark mode
+- [ ] Döviz çevirici (calculator)
+- [ ] Kur alarm sistemi
 
 ## 📄 Lisans
 
