@@ -12,19 +12,21 @@
       <div class="header-top">
         <h1>TCMB Döviz Kurları</h1>
         <div class="header-actions">
+          <button id="calculatorBtn" class="calculator-btn" title="Döviz Çevirici">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+              <line x1="8" y1="6" x2="16" y2="6"></line>
+              <line x1="8" y1="10" x2="16" y2="10"></line>
+              <line x1="8" y1="14" x2="16" y2="14"></line>
+              <line x1="8" y1="18" x2="16" y2="18"></line>
+            </svg>
+          </button>
           <button id="languageBtn" class="language-btn" title="Dil / Language">
             <span class="language-flag">🇹🇷</span>
           </button>
           <button id="themeBtn" class="theme-btn" title="Tema Değiştir">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-          </button>
-          <button id="exportBtn" class="export-btn" title="Excel'e Aktar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
           </button>
           <button id="settingsBtn" class="settings-btn" title="Filtre Ayarları">
@@ -61,13 +63,74 @@
       </div>
     </div>
     
+    <div class="calculator-modal" id="calculatorModal" style="display: none;">
+      <div class="calculator-modal-overlay" id="calculatorModalOverlay"></div>
+      <div class="calculator-modal-content">
+        <div class="calculator-modal-header">
+          <h2 id="calculatorTitle">Döviz Çevirici</h2>
+          <button id="closeCalculatorBtn" class="close-btn">×</button>
+        </div>
+        <div class="calculator-modal-body">
+          <div class="calculator-row">
+            <div class="calculator-group">
+              <label id="amountLabel">Miktar</label>
+              <input type="number" id="amountInput" class="calculator-input" value="1" min="0" step="0.01">
+            </div>
+            <div class="calculator-group">
+              <label id="fromCurrencyLabel">Dönüştürülecek</label>
+              <select id="fromCurrency" class="calculator-select">
+                <option value="TRY">TRY - Türk Lirası</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="calculator-swap">
+            <button id="swapBtn" class="swap-btn" title="Dövizleri değiştir">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 16V4M7 4L3 8M7 4l4 4"></path>
+                <path d="M17 8v12M17 20l4-4M17 20l-4-4"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="calculator-row">
+            <div class="calculator-group">
+              <label id="resultLabel">Sonuç</label>
+              <input type="text" id="resultInput" class="calculator-input calculator-result" readonly>
+            </div>
+            <div class="calculator-group">
+              <label id="toCurrencyLabel">Hedef Döviz</label>
+              <select id="toCurrency" class="calculator-select">
+                <option value="USD">USD - ABD Doları</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="calculator-info" id="calculatorInfo">
+            <small id="calculatorNote">* Kurlar TCMB'nin resmi verilerine göre hesaplanmaktadır.</small>
+            <small id="calculatorDate" style="display: block; margin-top: 6px; font-weight: 600; color: var(--primary-color);"></small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <div class="loading" id="loading">
       <div class="spinner"></div>
       <p>Kurlar yükleniyor...</p>
     </div>
     
-    <div class="search-container" id="searchContainer" style="display: none;">
-      <input type="text" id="searchInput" class="search-input" placeholder="Döviz ara (ör: USD, Euro, Dolar...)">
+    <div class="search-export-container" id="searchContainer" style="display: none;">
+      <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="Döviz ara (ör: USD, Euro, Dolar...)">
+      </div>
+      <button id="exportBtn" class="export-btn-table" title="Excel'e Aktar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span class="export-text">Excel</span>
+      </button>
     </div>
     
     <div class="table-container">

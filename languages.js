@@ -11,6 +11,7 @@ const LANGUAGES = {
       // Theme
       themeToggle: 'Tema Değiştir',
       exportBtn: 'Excel\'e Aktar',
+      exportBtnShort: 'Excel',
       settingsBtn: 'Filtre Ayarları',
       
       // Loading & Errors
@@ -64,6 +65,16 @@ const LANGUAGES = {
       footerBy: 'tarafından',
       footerDeveloped: 'geliştirildi',
       
+      // Calculator
+      calculatorTitle: 'Döviz Çevirici',
+      calculatorBtn: 'Döviz Çevirici',
+      amountLabel: 'Miktar',
+      fromCurrencyLabel: 'Dönüştürülecek',
+      toCurrencyLabel: 'Hedef Döviz',
+      resultLabel: 'Sonuç',
+      swapCurrencies: 'Dövizleri değiştir',
+      calculatorNote: '* Kurlar TCMB\'nin resmi verilerine göre hesaplanmaktadır.',
+      
       // Language
       languageToggle: 'Dil Değiştir (Language)',
       currentLanguage: '🇹🇷',
@@ -86,6 +97,7 @@ const LANGUAGES = {
       // Theme
       themeToggle: 'Change Theme',
       exportBtn: 'Export to Excel',
+      exportBtnShort: 'Excel',
       settingsBtn: 'Filter Settings',
       
       // Loading & Errors
@@ -138,6 +150,16 @@ const LANGUAGES = {
       // Footer
       footerBy: 'by',
       footerDeveloped: 'Developed',
+      
+      // Calculator
+      calculatorTitle: 'Currency Converter',
+      calculatorBtn: 'Currency Converter',
+      amountLabel: 'Amount',
+      fromCurrencyLabel: 'From',
+      toCurrencyLabel: 'To',
+      resultLabel: 'Result',
+      swapCurrencies: 'Swap currencies',
+      calculatorNote: '* Rates are calculated according to CBRT official data.',
       
       // Language
       languageToggle: 'Change Language (Dil)',

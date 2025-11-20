@@ -30,7 +30,15 @@
       EXPORT_BTN: 'exportBtn',
       THEME_BTN: 'themeBtn',
       LANGUAGE_BTN: 'languageBtn',
+      CALCULATOR_BTN: 'calculatorBtn',
       CLOSE_FILTER_BTN: 'closeFilterBtn',
+      CLOSE_CALCULATOR_BTN: 'closeCalculatorBtn',
+      CALCULATOR_MODAL_OVERLAY: 'calculatorModalOverlay',
+      AMOUNT_INPUT: 'amountInput',
+      FROM_CURRENCY: 'fromCurrency',
+      TO_CURRENCY: 'toCurrency',
+      RESULT_INPUT: 'resultInput',
+      SWAP_BTN: 'swapBtn',
       FILTER_MODAL_OVERLAY: 'filterModalOverlay',
       SELECT_ALL_BTN: 'selectAllBtn',
       DESELECT_ALL_BTN: 'deselectAllBtn',
@@ -751,7 +759,15 @@
         exportBtn: document.getElementById(ids.EXPORT_BTN),
         themeBtn: document.getElementById(ids.THEME_BTN),
         languageBtn: document.getElementById(ids.LANGUAGE_BTN),
+        calculatorBtn: document.getElementById(ids.CALCULATOR_BTN),
         closeFilterBtn: document.getElementById(ids.CLOSE_FILTER_BTN),
+        closeCalculatorBtn: document.getElementById(ids.CLOSE_CALCULATOR_BTN),
+        calculatorModalOverlay: document.getElementById(ids.CALCULATOR_MODAL_OVERLAY),
+        amountInput: document.getElementById(ids.AMOUNT_INPUT),
+        fromCurrency: document.getElementById(ids.FROM_CURRENCY),
+        toCurrency: document.getElementById(ids.TO_CURRENCY),
+        resultInput: document.getElementById(ids.RESULT_INPUT),
+        swapBtn: document.getElementById(ids.SWAP_BTN),
         filterModalOverlay: document.getElementById(ids.FILTER_MODAL_OVERLAY),
         selectAllBtn: document.getElementById(ids.SELECT_ALL_BTN),
         deselectAllBtn: document.getElementById(ids.DESELECT_ALL_BTN),
@@ -932,6 +948,59 @@
   }
 
   // ============================================================================
+  // Business Logic: Currency Converter
+  // ============================================================================
+  class ConverterService {
+    constructor() {
+      this._currencies = [];
+      this._tryRate = 1;
+    }
+
+    setCurrencies(currencies) {
+      this._currencies = currencies;
+    }
+
+    convert(amount, fromCode, toCode) {
+      if (fromCode === 'TRY' && toCode === 'TRY') {
+        return amount;
+      }
+
+      const fromCurrency = fromCode === 'TRY' ? null : this._currencies.find(c => c.code === fromCode);
+      const toCurrency = toCode === 'TRY' ? null : this._currencies.find(c => c.code === toCode);
+
+      if (fromCode !== 'TRY' && !fromCurrency) {
+        throw new Error(`Currency not found: ${fromCode}`);
+      }
+      if (toCode !== 'TRY' && !toCurrency) {
+        throw new Error(`Currency not found: ${toCode}`);
+      }
+
+      let tryAmount = amount;
+
+      if (fromCode !== 'TRY') {
+        const fromRate = fromCurrency.selling;
+        const fromUnit = fromCurrency.unit;
+        tryAmount = (amount * fromRate) / fromUnit;
+      }
+
+      if (toCode === 'TRY') {
+        return tryAmount;
+      }
+
+      const toRate = toCurrency.buying;
+      const toUnit = toCurrency.unit;
+      return (tryAmount * toUnit) / toRate;
+    }
+
+    getAvailableCurrencies() {
+      return [
+        { code: 'TRY', name: 'Türk Lirası', unit: 1 },
+        ...this._currencies.map(c => ({ code: c.code, name: c.originalName, unit: c.unit }))
+      ];
+    }
+  }
+
+  // ============================================================================
   // Presentation Layer: Modal Management
   // ============================================================================
   class ModalManager {
@@ -941,6 +1010,14 @@
 
     static close() {
       document.getElementById(CONFIG.UI_IDS.FILTER_MODAL).style.display = 'none';
+    }
+
+    static openCalculator() {
+      document.getElementById('calculatorModal').style.display = 'block';
+    }
+
+    static closeCalculator() {
+      document.getElementById('calculatorModal').style.display = 'none';
     }
   }
 
@@ -957,12 +1034,14 @@
       const favoriteService = new FavoriteService(favoriteRepository);
       const themeService = new ThemeService(storageService);
       const languageService = new LanguageService(storageService);
+      const converterService = new ConverterService();
       
       this._ui = new UIManager();
       this._filterService = filterService;
       this._favoriteService = favoriteService;
       this._themeService = themeService;
       this._languageService = languageService;
+      this._converterService = converterService;
       this._lastUpdateData = null;
       
       this._initialize();
@@ -1007,9 +1086,16 @@
       }
       if (this._ui.elements.exportBtn) {
         this._ui.elements.exportBtn.setAttribute('title', t('exportBtn'));
+        const exportText = this._ui.elements.exportBtn.querySelector('.export-text');
+        if (exportText) {
+          exportText.textContent = t('exportBtnShort');
+        }
       }
       if (this._ui.elements.settingsBtn) {
         this._ui.elements.settingsBtn.setAttribute('title', t('settingsBtn'));
+      }
+      if (this._ui.elements.calculatorBtn) {
+        this._ui.elements.calculatorBtn.setAttribute('title', t('calculatorBtn'));
       }
       if (this._ui.elements.languageBtn) {
         const langFlag = this._ui.elements.languageBtn.querySelector('.language-flag');
@@ -1017,6 +1103,28 @@
           langFlag.textContent = this._languageService.getCurrentLanguage() === 'tr' ? '🇹🇷' : '🇬🇧';
         }
         this._ui.elements.languageBtn.setAttribute('title', t('languageToggle'));
+      }
+      
+      // Calculator Modal
+      const calculatorTitle = document.getElementById('calculatorTitle');
+      const amountLabel = document.getElementById('amountLabel');
+      const fromCurrencyLabel = document.getElementById('fromCurrencyLabel');
+      const toCurrencyLabel = document.getElementById('toCurrencyLabel');
+      const resultLabel = document.getElementById('resultLabel');
+      const calculatorNote = document.getElementById('calculatorNote');
+      if (calculatorTitle) calculatorTitle.textContent = t('calculatorTitle');
+      if (amountLabel) amountLabel.textContent = t('amountLabel');
+      if (fromCurrencyLabel) fromCurrencyLabel.textContent = t('fromCurrencyLabel');
+      if (toCurrencyLabel) toCurrencyLabel.textContent = t('toCurrencyLabel');
+      if (resultLabel) resultLabel.textContent = t('resultLabel');
+      if (calculatorNote) calculatorNote.textContent = t('calculatorNote');
+      if (this._ui.elements.swapBtn) {
+        this._ui.elements.swapBtn.setAttribute('title', t('swapCurrencies'));
+      }
+      
+      // Update calculator date if modal is open
+      if (document.getElementById('calculatorModal').style.display === 'block') {
+        this._updateCalculatorDate();
       }
       
       // Search
@@ -1094,9 +1202,51 @@
         });
       }
 
+      if (this._ui.elements.calculatorBtn) {
+        this._ui.elements.calculatorBtn.addEventListener('click', () => {
+          this._openCalculator();
+        });
+      }
+
       this._ui.elements.closeFilterBtn.addEventListener('click', () => {
         ModalManager.close();
       });
+
+      if (this._ui.elements.closeCalculatorBtn) {
+        this._ui.elements.closeCalculatorBtn.addEventListener('click', () => {
+          ModalManager.closeCalculator();
+        });
+      }
+
+      if (this._ui.elements.calculatorModalOverlay) {
+        this._ui.elements.calculatorModalOverlay.addEventListener('click', () => {
+          ModalManager.closeCalculator();
+        });
+      }
+
+      if (this._ui.elements.swapBtn) {
+        this._ui.elements.swapBtn.addEventListener('click', () => {
+          this._swapCurrencies();
+        });
+      }
+
+      if (this._ui.elements.amountInput) {
+        this._ui.elements.amountInput.addEventListener('input', () => {
+          this._calculate();
+        });
+      }
+
+      if (this._ui.elements.fromCurrency) {
+        this._ui.elements.fromCurrency.addEventListener('change', () => {
+          this._calculate();
+        });
+      }
+
+      if (this._ui.elements.toCurrency) {
+        this._ui.elements.toCurrency.addEventListener('change', () => {
+          this._calculate();
+        });
+      }
 
       this._ui.elements.filterModalOverlay.addEventListener('click', () => {
         ModalManager.close();
@@ -1150,6 +1300,8 @@
 
         const mergedData = CurrencyApiService.mergeWithPreviousDay(todayData, yesterdayData);
         const sortedData = CurrencyApiService.sortByPopularity(mergedData);
+
+        this._converterService.setCurrencies(sortedData);
 
         await this._filterService.initialize(sortedData);
         FilterRenderer.renderCheckboxes(sortedData, this._filterService, () => this._applyFilters());
@@ -1232,6 +1384,79 @@
         console.error('Export hatası:', error);
         alert(`${t('exportError')} ${error.message}`);
       }
+    }
+
+    _openCalculator() {
+      this._populateCurrencySelects();
+      this._updateCalculatorDate();
+      ModalManager.openCalculator();
+      this._calculate();
+    }
+
+    _updateCalculatorDate() {
+      const t = (key) => this._languageService.t(key);
+      const calculatorDateEl = document.getElementById('calculatorDate');
+      
+      if (calculatorDateEl && this._lastUpdateData && this._lastUpdateData.dateString) {
+        calculatorDateEl.textContent = `${t('cbrtRateDate')} ${this._lastUpdateData.dateString}`;
+      }
+    }
+
+    _populateCurrencySelects() {
+      const currencies = this._converterService.getAvailableCurrencies();
+      const t = (key) => this._languageService.t('currencyNames.' + key) || key;
+      
+      const fromSelect = this._ui.elements.fromCurrency;
+      const toSelect = this._ui.elements.toCurrency;
+      
+      fromSelect.innerHTML = '';
+      toSelect.innerHTML = '';
+      
+      currencies.forEach(currency => {
+        const displayName = currency.code === 'TRY' 
+          ? currency.name 
+          : this._languageService.getCurrentLanguage() === 'en' 
+            ? t(currency.name) || currency.name
+            : currency.name;
+        
+        const option1 = document.createElement('option');
+        option1.value = currency.code;
+        option1.textContent = `${currency.code}${currency.unit > 1 ? ` (${currency.unit})` : ''} - ${displayName}`;
+        
+        const option2 = document.createElement('option');
+        option2.value = currency.code;
+        option2.textContent = `${currency.code}${currency.unit > 1 ? ` (${currency.unit})` : ''} - ${displayName}`;
+        
+        fromSelect.appendChild(option1);
+        toSelect.appendChild(option2);
+      });
+      
+      fromSelect.value = 'TRY';
+      toSelect.value = 'USD';
+    }
+
+    _calculate() {
+      try {
+        const amount = parseFloat(this._ui.elements.amountInput.value) || 0;
+        const fromCode = this._ui.elements.fromCurrency.value;
+        const toCode = this._ui.elements.toCurrency.value;
+        
+        const result = this._converterService.convert(amount, fromCode, toCode);
+        this._ui.elements.resultInput.value = result.toFixed(4).replace('.', ',');
+      } catch (error) {
+        console.error('Conversion error:', error);
+        this._ui.elements.resultInput.value = 'Hata';
+      }
+    }
+
+    _swapCurrencies() {
+      const fromValue = this._ui.elements.fromCurrency.value;
+      const toValue = this._ui.elements.toCurrency.value;
+      
+      this._ui.elements.fromCurrency.value = toValue;
+      this._ui.elements.toCurrency.value = fromValue;
+      
+      this._calculate();
     }
   }
 

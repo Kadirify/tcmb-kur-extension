@@ -22,6 +22,7 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
 - **Popüler Döviz Vurgusu**: USD, EUR, GBP gibi popüler dövizler otomatik olarak öne çıkarılır
 - **Dark Mode**: Göz yormayan karanlık tema desteği
 - **Çoklu Dil Desteği**: Türkçe ve İngilizce dil seçenekleri
+- **Döviz Çevirici**: Gerçek zamanlı döviz hesaplama aracı
 - **Modern Tasarım**: Temiz, minimal ve profesyonel arayüz
 - **Hata Yönetimi**: Ağ hatalarında otomatik yeniden deneme mekanizması
 - **Kalıcı Ayarlar**: Filtre, favori, tema ve dil tercihleriniz otomatik olarak kaydedilir
@@ -116,6 +117,13 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
    - Tüm arayüz metinleri, tablo başlıkları ve mesajlar değişir
    - Excel export dosya isimleri ve içeriği seçili dile göre oluşturulur
    - Dil tercihiniz kalıcı olarak kaydedilir
+
+8. **Döviz Çevirici**
+   - Sağ üstteki hesap makinesi ikonuna tıklayarak döviz çeviriciyi açın
+   - İki döviz arasında anlık çeviri yapın (TRY dahil)
+   - Swap butonu ile dövizleri hızlıca değiştirin
+   - TCMB'nin resmi kur verilerine göre hesaplama
+   - Alış ve satış kurları otomatik kullanılır
 
 ## 🏗️ Mimari ve Teknik Detaylar
 
@@ -227,8 +235,9 @@ Kullanıcı belirli bir dövizi arıyor. Arama kutusuna döviz kodunu yazarak an
 - [x] Export özelliği (Excel .xlsx)
 - [x] Çoklu dil desteği (TR/EN)
 - [x] Dark mode
-- [ ] Döviz çevirici (calculator)
+- [x] Döviz çevirici (calculator)
 - [ ] Kur alarm sistemi
+- [ ] Daha fazla dil desteği (DE, FR, ES)
 
 ## 📄 Lisans
 
