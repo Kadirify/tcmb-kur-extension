@@ -16,10 +16,12 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
 
 ### Gelişmiş Özellikler
 - **Akıllı Filtreleme**: Sadece takip etmek istediğiniz dövizleri seçebilirsiniz
+- **Favori Dövizler**: Sık kullandığınız dövizleri favorilere ekleyin, hızlı erişim sağlayın
 - **Arama Fonksiyonu**: Döviz kodu veya adına göre hızlı arama
 - **Popüler Döviz Vurgusu**: USD, EUR, GBP gibi popüler dövizler otomatik olarak öne çıkarılır
 - **Responsive Tasarım**: Modern ve kurumsal görünümlü arayüz
 - **Hata Yönetimi**: Ağ hatalarında otomatik yeniden deneme mekanizması
+- **Kalıcı Ayarlar**: Filtre ve favori tercihleriniz otomatik olarak kaydedilir
 
 ### Kullanıcı Deneyimi
 - **Hızlı Erişim**: Tek tıkla tüm kurlara erişim
@@ -81,11 +83,16 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
    - Açılan modal'dan görmek istediğiniz dövizleri seçin
    - "Tümünü Seç" / "Tümünü Kaldır" butonları ile hızlı seçim yapın
 
-2. **Karşılaştırma**
+2. **Favori Dövizler**
+   - Her döviz satırının yanındaki yıldız (☆) ikonuna tıklayarak favorilere ekleyin
+   - Favori dövizler tabloda en üstte gösterilir ve sarı arka planla vurgulanır
+   - Favori dövizleriniz kalıcı olarak kaydedilir
+
+3. **Karşılaştırma**
    - Her döviz için bugünün kuru büyük, dünün kuru parantez içinde gösterilir
    - Artış durumunda ↑ (yeşil), azalış durumunda ↓ (kırmızı) işareti görünür
 
-3. **Popüler Dövizler**
+4. **Popüler Dövizler**
    - USD, EUR, GBP gibi popüler dövizler mavi arka planla vurgulanır
    - Tabloda otomatik olarak en üstte gösterilir
 
@@ -182,7 +189,7 @@ Kullanıcı belirli bir dövizi arıyor. Arama kutusuna döviz kodunu yazarak an
 
 - [ ] Bildirim sistemi (belirlenen eşik değerlerde uyarı)
 - [ ] Grafik görünümü (zaman içindeki değişim)
-- [ ] Favori dövizler (hızlı erişim için)
+- [x] Favori dövizler (hızlı erişim için)
 - [ ] Export özelliği (CSV/Excel)
 - [ ] Çoklu dil desteği
 - [ ] Dark mode

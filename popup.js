@@ -15,7 +15,8 @@
     DECIMAL_PLACES: 4,
     STORAGE_KEYS: {
       SELECTED_CURRENCIES: 'selectedCurrencies',
-      IS_INITIALIZED: 'isInitialized'
+      IS_INITIALIZED: 'isInitialized',
+      FAVORITE_CURRENCIES: 'favoriteCurrencies'
     },
     UI_IDS: {
       DATE_INPUT: 'dateInput',
@@ -154,6 +155,112 @@
 
     setSelected(selectedCurrencies) {
       this._selectedCurrencies = new Set(selectedCurrencies);
+    }
+  }
+
+  // ============================================================================
+  // Repository Pattern: Favorite Data Management
+  // ============================================================================
+  class FavoriteRepository {
+    constructor(storageService) {
+      this._storage = storageService;
+      this._favoriteCurrencies = new Set();
+    }
+
+    async load() {
+      if (!this._storage.isAvailable()) {
+        return new Set();
+      }
+
+      try {
+        const result = await this._storage.get([CONFIG.STORAGE_KEYS.FAVORITE_CURRENCIES]);
+        const favorites = result[CONFIG.STORAGE_KEYS.FAVORITE_CURRENCIES];
+        
+        if (Array.isArray(favorites)) {
+          return new Set(favorites);
+        }
+        return new Set();
+      } catch (error) {
+        console.error('Failed to load favorites:', error);
+        return new Set();
+      }
+    }
+
+    async save(favoriteCurrencies) {
+      if (!this._storage.isAvailable()) {
+        return false;
+      }
+
+      try {
+        const favoritesArray = Array.from(favoriteCurrencies);
+        await this._storage.set({ 
+          [CONFIG.STORAGE_KEYS.FAVORITE_CURRENCIES]: favoritesArray 
+        });
+        this._favoriteCurrencies = new Set(favoriteCurrencies);
+        return true;
+      } catch (error) {
+        console.error('Failed to save favorites:', error);
+        return false;
+      }
+    }
+
+    getFavorites() {
+      return new Set(this._favoriteCurrencies);
+    }
+
+    setFavorites(favoriteCurrencies) {
+      this._favoriteCurrencies = new Set(favoriteCurrencies);
+    }
+  }
+
+  // ============================================================================
+  // Business Logic: Favorite Management
+  // ============================================================================
+  class FavoriteService {
+    constructor(favoriteRepository) {
+      this._repository = favoriteRepository;
+    }
+
+    async initialize() {
+      const favorites = await this._repository.load();
+      this._repository.setFavorites(favorites);
+      return favorites;
+    }
+
+    async toggle(currencyCode) {
+      const current = this._repository.getFavorites();
+      
+      if (current.has(currencyCode)) {
+        current.delete(currencyCode);
+      } else {
+        current.add(currencyCode);
+      }
+      
+      this._repository.setFavorites(current);
+      await this._repository.save(current);
+      return current;
+    }
+
+    isFavorite(currencyCode) {
+      return this._repository.getFavorites().has(currencyCode);
+    }
+
+    getFavorites() {
+      return this._repository.getFavorites();
+    }
+
+    async add(currencyCode) {
+      const current = this._repository.getFavorites();
+      current.add(currencyCode);
+      this._repository.setFavorites(current);
+      await this._repository.save(current);
+    }
+
+    async remove(currencyCode) {
+      const current = this._repository.getFavorites();
+      current.delete(currencyCode);
+      this._repository.setFavorites(current);
+      await this._repository.save(current);
     }
   }
 
@@ -491,8 +598,9 @@
   // Presentation Layer: Currency Rendering
   // ============================================================================
   class CurrencyRenderer {
-    static renderRow(currency) {
+    static renderRow(currency, favoriteService, onFavoriteToggle) {
       const isPopular = CONFIG.POPULAR_CURRENCIES.includes(currency.code);
+      const isFavorite = favoriteService ? favoriteService.isFavorite(currency.code) : false;
       const currencyDisplay = currency.getDisplayCode();
       const buyingChange = currency.getBuyingChange();
       const sellingChange = currency.getSellingChange();
@@ -505,15 +613,27 @@
         ? `<span class="yesterday-value ${sellingChange}">(${NumberFormatter.format(currency.yesterdaySelling)})</span>`
         : '';
 
+      const favoriteIcon = isFavorite ? '★' : '☆';
+      const favoriteClass = isFavorite ? 'favorite' : '';
+      const favoriteTitle = isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle';
+
       const row = document.createElement('tr');
       if (isPopular) {
         row.classList.add('popular');
       }
+      if (isFavorite) {
+        row.classList.add('favorite-row');
+      }
 
       row.innerHTML = `
         <td class="currency-cell">
-          <span class="currency-code">${currencyDisplay}</span>
-          <span class="currency-name">${currency.name}</span>
+          <div class="currency-header">
+            <div class="currency-info">
+              <span class="currency-code">${currencyDisplay}</span>
+              <span class="currency-name">${currency.name}</span>
+            </div>
+            ${favoriteService ? `<button class="favorite-btn ${favoriteClass}" data-currency="${currency.code}" title="${favoriteTitle}">${favoriteIcon}</button>` : ''}
+          </div>
         </td>
         <td class="rate-cell buying ${buyingChange}">
           ${NumberFormatter.format(currency.buying)}
@@ -525,10 +645,22 @@
         </td>
       `;
 
+      // Favori butonuna event listener ekle
+      if (favoriteService && onFavoriteToggle) {
+        const favoriteBtn = row.querySelector('.favorite-btn');
+        if (favoriteBtn) {
+          favoriteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await favoriteService.toggle(currency.code);
+            onFavoriteToggle();
+          });
+        }
+      }
+
       return row;
     }
 
-    static renderTable(currencies, container) {
+    static renderTable(currencies, container, favoriteService = null, onFavoriteToggle = null) {
       container.innerHTML = '';
 
       if (currencies.length === 0) {
@@ -536,8 +668,16 @@
         return;
       }
 
-      currencies.forEach(currency => {
-        container.appendChild(this.renderRow(currency));
+      // Favori dövizleri önce göster
+      const favorites = favoriteService ? favoriteService.getFavorites() : new Set();
+      const favoriteCurrencies = currencies.filter(c => favorites.has(c.code));
+      const otherCurrencies = currencies.filter(c => !favorites.has(c.code));
+
+      // Önce favoriler, sonra diğerleri
+      const sortedCurrencies = [...favoriteCurrencies, ...otherCurrencies];
+
+      sortedCurrencies.forEach(currency => {
+        container.appendChild(this.renderRow(currency, favoriteService, onFavoriteToggle));
       });
     }
   }
@@ -599,16 +739,20 @@
       const storageService = new StorageService();
       const filterRepository = new FilterRepository(storageService);
       const filterService = new FilterService(filterRepository);
+      const favoriteRepository = new FavoriteRepository(storageService);
+      const favoriteService = new FavoriteService(favoriteRepository);
       
       this._ui = new UIManager();
       this._filterService = filterService;
+      this._favoriteService = favoriteService;
       
       this._initialize();
     }
 
-    _initialize() {
+    async _initialize() {
       this._initializeDateInput();
       this._initializeEventListeners();
+      await this._favoriteService.initialize();
       this._loadRates();
     }
 
@@ -726,7 +870,12 @@
       const searchTerm = this._ui.elements.searchInput.value;
       const allCurrencies = this._filterService.getAllCurrencies();
       const filtered = this._filterService.filter(allCurrencies, searchTerm);
-      CurrencyRenderer.renderTable(filtered, this._ui.elements.currencies);
+      CurrencyRenderer.renderTable(
+        filtered, 
+        this._ui.elements.currencies, 
+        this._favoriteService,
+        () => this._applyFilters()
+      );
       this._ui.showTable();
     }
   }

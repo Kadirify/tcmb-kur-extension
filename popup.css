@@ -387,6 +387,63 @@ header h1 {
   gap: 4px;
 }
 
+.currency-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.currency-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.favorite-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #d1d5db;
+  transition: color 0.2s, transform 0.2s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.2);
+  color: #fbbf24;
+}
+
+.favorite-btn.favorite {
+  color: #fbbf24;
+}
+
+.favorite-btn.favorite:hover {
+  color: #f59e0b;
+}
+
+.rates-table tbody tr.favorite-row {
+  background-color: #fffbeb;
+  border-left: 3px solid #fbbf24;
+}
+
+.rates-table tbody tr.favorite-row:hover {
+  background-color: #fef3c7;
+}
+
+.rates-table tbody tr.favorite-row.popular {
+  background-color: #eff6ff;
+  border-left: 3px solid #fbbf24;
+}
+
+.rates-table tbody tr.favorite-row.popular:hover {
+  background-color: #dbeafe;
+}
+
 .currency-code {
   font-weight: 600;
   color: #1e3a8a;
