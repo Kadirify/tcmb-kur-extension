@@ -34,6 +34,14 @@ header {
   margin-bottom: 10px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+  position: absolute;
+  right: 20px;
+  top: 16px;
+}
+
 header h1 {
   font-size: 18px;
   font-weight: 600;
@@ -43,7 +51,8 @@ header h1 {
   text-align: center;
 }
 
-.settings-btn {
+.settings-btn,
+.export-btn {
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 6px;
@@ -54,9 +63,17 @@ header h1 {
   align-items: center;
   justify-content: center;
   transition: background 0.2s, border-color 0.2s;
-  position: absolute;
-  right: 20px;
-  top: 16px;
+}
+
+.settings-btn:hover,
+.export-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.settings-btn svg,
+.export-btn svg {
+  display: block;
 }
 
 .settings-btn:hover {

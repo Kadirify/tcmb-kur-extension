@@ -17,6 +17,7 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
 ### Gelişmiş Özellikler
 - **Akıllı Filtreleme**: Sadece takip etmek istediğiniz dövizleri seçebilirsiniz
 - **Favori Dövizler**: Sık kullandığınız dövizleri favorilere ekleyin, hızlı erişim sağlayın
+- **Excel Export**: Döviz kurlarını gerçek Excel formatında (.xls) dışa aktarın
 - **Arama Fonksiyonu**: Döviz kodu veya adına göre hızlı arama
 - **Popüler Döviz Vurgusu**: USD, EUR, GBP gibi popüler dövizler otomatik olarak öne çıkarılır
 - **Responsive Tasarım**: Modern ve kurumsal görünümlü arayüz
@@ -88,11 +89,18 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
    - Favori dövizler tabloda en üstte gösterilir ve sarı arka planla vurgulanır
    - Favori dövizleriniz kalıcı olarak kaydedilir
 
-3. **Karşılaştırma**
+3. **Excel Export**
+   - Sağ üstteki indirme (↓) ikonuna tıklayın
+   - Mevcut görüntülenen döviz kurları Excel formatında (.xls) indirilir
+   - Excel dosyası Microsoft Excel, LibreOffice Calc ve diğer tablo programlarında açılabilir
+   - Dosya adı otomatik olarak tarih içerir (örn: tcmb-doviz-kurlari-2024-01-15.xls)
+   - Formatlanmış başlıklar ve sayı formatları ile profesyonel görünüm
+
+4. **Karşılaştırma**
    - Her döviz için bugünün kuru büyük, dünün kuru parantez içinde gösterilir
    - Artış durumunda ↑ (yeşil), azalış durumunda ↓ (kırmızı) işareti görünür
 
-4. **Popüler Dövizler**
+6. **Popüler Dövizler**
    - USD, EUR, GBP gibi popüler dövizler mavi arka planla vurgulanır
    - Tabloda otomatik olarak en üstte gösterilir
 
@@ -190,7 +198,7 @@ Kullanıcı belirli bir dövizi arıyor. Arama kutusuna döviz kodunu yazarak an
 - [ ] Bildirim sistemi (belirlenen eşik değerlerde uyarı)
 - [ ] Grafik görünümü (zaman içindeki değişim)
 - [x] Favori dövizler (hızlı erişim için)
-- [ ] Export özelliği (CSV/Excel)
+- [x] Export özelliği (CSV/Excel)
 - [ ] Çoklu dil desteği
 - [ ] Dark mode
 

@@ -24,6 +24,7 @@
       RETRY_BTN: 'retryBtn',
       SEARCH_INPUT: 'searchInput',
       SETTINGS_BTN: 'settingsBtn',
+      EXPORT_BTN: 'exportBtn',
       CLOSE_FILTER_BTN: 'closeFilterBtn',
       FILTER_MODAL_OVERLAY: 'filterModalOverlay',
       SELECT_ALL_BTN: 'selectAllBtn',
@@ -484,6 +485,67 @@
     }
   }
 
+  class ExportService {
+    static exportToExcel(currencies, dateString = null) {
+      if (!currencies || currencies.length === 0) {
+        throw new Error('Export için döviz verisi bulunamadı');
+      }
+
+      if (typeof XLSX === 'undefined') {
+        throw new Error('Excel kütüphanesi yüklenemedi');
+      }
+
+      const date = dateString || new Date().toISOString().split('T')[0];
+
+      const headers = ['Döviz Kodu', 'Döviz Adı', 'Birim', 'Alış', 'Satış', 'Banknot Alış', 'Banknot Satış'];
+      const data = [headers];
+
+      currencies.forEach(currency => {
+        data.push([
+          currency.code,
+          currency.name,
+          currency.unit,
+          currency.buying,
+          currency.selling,
+          currency.banknoteBuying,
+          currency.banknoteSelling
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      
+      const wscols = [
+        { wch: 12 },
+        { wch: 25 },
+        { wch: 8 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 }
+      ];
+      ws['!cols'] = wscols;
+
+      const headerStyle = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '1e3a8a' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (!ws[cellAddress]) continue;
+        ws[cellAddress].s = headerStyle;
+      }
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'TCMB Döviz Kurları');
+
+      const fileName = `tcmb-doviz-kurlari-${date}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    }
+  }
+
   // ============================================================================
   // Utility Classes
   // ============================================================================
@@ -540,6 +602,7 @@
         retryBtn: document.getElementById(ids.RETRY_BTN),
         searchInput: document.getElementById(ids.SEARCH_INPUT),
         settingsBtn: document.getElementById(ids.SETTINGS_BTN),
+        exportBtn: document.getElementById(ids.EXPORT_BTN),
         closeFilterBtn: document.getElementById(ids.CLOSE_FILTER_BTN),
         filterModalOverlay: document.getElementById(ids.FILTER_MODAL_OVERLAY),
         selectAllBtn: document.getElementById(ids.SELECT_ALL_BTN),
@@ -629,8 +692,8 @@
         <td class="currency-cell">
           <div class="currency-header">
             <div class="currency-info">
-              <span class="currency-code">${currencyDisplay}</span>
-              <span class="currency-name">${currency.name}</span>
+          <span class="currency-code">${currencyDisplay}</span>
+          <span class="currency-name">${currency.name}</span>
             </div>
             ${favoriteService ? `<button class="favorite-btn ${favoriteClass}" data-currency="${currency.code}" title="${favoriteTitle}">${favoriteIcon}</button>` : ''}
           </div>
@@ -787,6 +850,12 @@
         ModalManager.open();
       });
 
+      if (this._ui.elements.exportBtn) {
+        this._ui.elements.exportBtn.addEventListener('click', () => {
+          this._exportData();
+        });
+      }
+
       this._ui.elements.closeFilterBtn.addEventListener('click', () => {
         ModalManager.close();
       });
@@ -877,6 +946,25 @@
         () => this._applyFilters()
       );
       this._ui.showTable();
+    }
+
+    _exportData() {
+      try {
+        const searchTerm = this._ui.elements.searchInput.value;
+        const allCurrencies = this._filterService.getAllCurrencies();
+        const filtered = this._filterService.filter(allCurrencies, searchTerm);
+        
+        if (filtered.length === 0) {
+          alert('Export için görüntülenecek döviz bulunamadı.');
+          return;
+        }
+
+        const dateString = this._ui.elements.dateInput.value;
+        ExportService.exportToExcel(filtered, dateString);
+      } catch (error) {
+        console.error('Export hatası:', error);
+        alert('Export sırasında bir hata oluştu: ' + error.message);
+      }
     }
   }
 
