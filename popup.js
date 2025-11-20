@@ -16,7 +16,8 @@
     STORAGE_KEYS: {
       SELECTED_CURRENCIES: 'selectedCurrencies',
       IS_INITIALIZED: 'isInitialized',
-      FAVORITE_CURRENCIES: 'favoriteCurrencies'
+      FAVORITE_CURRENCIES: 'favoriteCurrencies',
+      THEME: 'theme'
     },
     UI_IDS: {
       DATE_INPUT: 'dateInput',
@@ -25,6 +26,7 @@
       SEARCH_INPUT: 'searchInput',
       SETTINGS_BTN: 'settingsBtn',
       EXPORT_BTN: 'exportBtn',
+      THEME_BTN: 'themeBtn',
       CLOSE_FILTER_BTN: 'closeFilterBtn',
       FILTER_MODAL_OVERLAY: 'filterModalOverlay',
       SELECT_ALL_BTN: 'selectAllBtn',
@@ -547,6 +549,53 @@
   }
 
   // ============================================================================
+  // Business Logic: Theme Management
+  // ============================================================================
+  class ThemeService {
+    constructor(storageService) {
+      this._storage = storageService;
+      this._currentTheme = 'light';
+      this._html = document.documentElement;
+    }
+
+    async initialize() {
+      try {
+        const result = await this._storage.get([CONFIG.STORAGE_KEYS.THEME]);
+        const savedTheme = result[CONFIG.STORAGE_KEYS.THEME];
+        if (savedTheme === 'dark') {
+          this.setTheme('dark');
+        } else {
+          this.setTheme('light');
+        }
+      } catch (error) {
+        console.error('Failed to load theme from storage:', error);
+        this.setTheme('light');
+      }
+    }
+
+    setTheme(theme) {
+      this._currentTheme = theme;
+      if (theme === 'dark') {
+        this._html.setAttribute('data-theme', 'dark');
+      } else {
+        this._html.removeAttribute('data-theme');
+      }
+      this._storage.set({ [CONFIG.STORAGE_KEYS.THEME]: theme }).catch(error => {
+        console.error('Failed to save theme to storage:', error);
+      });
+    }
+
+    async toggle() {
+      const newTheme = this._currentTheme === 'light' ? 'dark' : 'light';
+      this.setTheme(newTheme);
+    }
+
+    isDarkMode() {
+      return this._currentTheme === 'dark';
+    }
+  }
+
+  // ============================================================================
   // Utility Classes
   // ============================================================================
   class DateFormatter {
@@ -603,6 +652,7 @@
         searchInput: document.getElementById(ids.SEARCH_INPUT),
         settingsBtn: document.getElementById(ids.SETTINGS_BTN),
         exportBtn: document.getElementById(ids.EXPORT_BTN),
+        themeBtn: document.getElementById(ids.THEME_BTN),
         closeFilterBtn: document.getElementById(ids.CLOSE_FILTER_BTN),
         filterModalOverlay: document.getElementById(ids.FILTER_MODAL_OVERLAY),
         selectAllBtn: document.getElementById(ids.SELECT_ALL_BTN),
@@ -804,18 +854,21 @@
       const filterService = new FilterService(filterRepository);
       const favoriteRepository = new FavoriteRepository(storageService);
       const favoriteService = new FavoriteService(favoriteRepository);
+      const themeService = new ThemeService(storageService);
       
       this._ui = new UIManager();
       this._filterService = filterService;
       this._favoriteService = favoriteService;
+      this._themeService = themeService;
       
       this._initialize();
     }
 
     async _initialize() {
       this._initializeDateInput();
-      this._initializeEventListeners();
+      await this._themeService.initialize();
       await this._favoriteService.initialize();
+      this._initializeEventListeners();
       this._loadRates();
     }
 
@@ -853,6 +906,12 @@
       if (this._ui.elements.exportBtn) {
         this._ui.elements.exportBtn.addEventListener('click', () => {
           this._exportData();
+        });
+      }
+
+      if (this._ui.elements.themeBtn) {
+        this._ui.elements.themeBtn.addEventListener('click', async () => {
+          await this._themeService.toggle();
         });
       }
 
@@ -923,7 +982,12 @@
                                year: 'numeric'
                              });
 
-        this._ui.updateLastUpdate(formattedDate);
+        const isToday = this._isToday(dateAttr);
+        const displayMessage = isToday 
+          ? `TCMB Kur Tarihi: ${formattedDate}` 
+          : `TCMB Kur Tarihi: ${formattedDate} (Bugünün kurları henüz yayınlanmadı - TCMB kurları hafta içi 15:30'da güncellenir)`;
+
+        this._ui.updateLastUpdate(displayMessage);
         this._applyFilters();
         this._ui.showTable();
         this._ui.hideLoading();
@@ -946,6 +1010,20 @@
         () => this._applyFilters()
       );
       this._ui.showTable();
+    }
+
+    _isToday(tcmbDate) {
+      if (!tcmbDate) return false;
+      
+      const parts = tcmbDate.split('.');
+      if (parts.length !== 3) return false;
+      
+      const [day, month, year] = parts.map(p => parseInt(p, 10));
+      const today = new Date();
+      
+      return day === today.getDate() && 
+             month === (today.getMonth() + 1) && 
+             year === today.getFullYear();
     }
 
     _exportData() {

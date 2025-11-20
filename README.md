@@ -20,7 +20,8 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
 - **Excel Export**: Döviz kurlarını gerçek Excel formatında (.xls) dışa aktarın
 - **Arama Fonksiyonu**: Döviz kodu veya adına göre hızlı arama
 - **Popüler Döviz Vurgusu**: USD, EUR, GBP gibi popüler dövizler otomatik olarak öne çıkarılır
-- **Responsive Tasarım**: Modern ve kurumsal görünümlü arayüz
+- **Dark Mode**: Göz yormayan karanlık tema desteği
+- **Modern Tasarım**: Temiz, minimal ve profesyonel arayüz
 - **Hata Yönetimi**: Ağ hatalarında otomatik yeniden deneme mekanizması
 - **Kalıcı Ayarlar**: Filtre ve favori tercihleriniz otomatik olarak kaydedilir
 
@@ -100,9 +101,14 @@ Bu eklenti, günlük döviz kuru takibi yapan kullanıcılar için hızlı ve ko
    - Her döviz için bugünün kuru büyük, dünün kuru parantez içinde gösterilir
    - Artış durumunda ↑ (yeşil), azalış durumunda ↓ (kırmızı) işareti görünür
 
-6. **Popüler Dövizler**
+5. **Popüler Dövizler**
    - USD, EUR, GBP gibi popüler dövizler mavi arka planla vurgulanır
    - Tabloda otomatik olarak en üstte gösterilir
+
+6. **Dark Mode**
+   - Sağ üstteki ay/güneş ikonuna tıklayarak karanlık tema aktif edilir
+   - Tema tercihiniz otomatik olarak kaydedilir
+   - Göz dostu renkler ve modern gradyanlar
 
 ## 🏗️ Mimari ve Teknik Detaylar
 
@@ -200,7 +206,7 @@ Kullanıcı belirli bir dövizi arıyor. Arama kutusuna döviz kodunu yazarak an
 - [x] Favori dövizler (hızlı erişim için)
 - [x] Export özelliği (CSV/Excel)
 - [ ] Çoklu dil desteği
-- [ ] Dark mode
+- [x] Dark mode
 
 ## 📄 Lisans
 
