@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "TCMB Döviz Kurları",
+  "version": "1.0.0",
+  "description": "Türkiye Cumhuriyet Merkez Bankası alış ve satış kurlarını gösterir",
+  "permissions": [
+    "https://www.tcmb.gov.tr/*"
+  ],
+  "host_permissions": [
+    "https://www.tcmb.gov.tr/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
+

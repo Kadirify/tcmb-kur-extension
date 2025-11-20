@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCMB Döviz Kurları</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-top">
+        <h1>TCMB Döviz Kurları</h1>
+        <button id="settingsBtn" class="settings-btn" title="Filtre Ayarları">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="date-selector-container">
+        <label for="dateInput" class="date-label">Tarih Seç:</label>
+        <input type="date" id="dateInput" class="date-input">
+        <button id="todayBtn" class="today-btn">Bugün</button>
+      </div>
+      <div class="last-update" id="lastUpdate">Yükleniyor...</div>
+    </header>
+    
+    <div class="filter-modal" id="filterModal" style="display: none;">
+      <div class="filter-modal-overlay" id="filterModalOverlay"></div>
+      <div class="filter-modal-content">
+        <div class="filter-modal-header">
+          <h2>Döviz Filtreleri</h2>
+          <button id="closeFilterBtn" class="close-btn">×</button>
+        </div>
+        <div class="filter-modal-body">
+          <div class="filter-header">
+            <button id="selectAllBtn" class="filter-btn">Tümünü Seç</button>
+            <button id="deselectAllBtn" class="filter-btn">Tümünü Kaldır</button>
+          </div>
+          <div class="filter-checkboxes" id="filterCheckboxes">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Kurlar yükleniyor...</p>
+    </div>
+    
+    <div class="search-container" id="searchContainer" style="display: none;">
+      <input type="text" id="searchInput" class="search-input" placeholder="Döviz ara (ör: USD, Euro, Dolar...)">
+    </div>
+    
+    <div class="table-container">
+      <table class="rates-table" id="ratesTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>Döviz</th>
+            <th>Alış</th>
+            <th>Satış</th>
+          </tr>
+        </thead>
+        <tbody id="currencies">
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="error" id="error" style="display: none;">
+      <p>Kurlar yüklenirken bir hata oluştu.</p>
+      <button id="retryBtn">Tekrar Dene</button>
+    </div>
+    
+    <footer>
+      <a href="https://github.com/kadirify" target="_blank">Kadirify</a>
+    </footer>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
+
