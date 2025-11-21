@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TCMB Döviz Kurları</title>
   <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
   <div class="container">
     <header>
@@ -22,7 +24,15 @@
             </svg>
           </button>
           <button id="languageBtn" class="language-btn" title="Dil / Language">
-            <span class="language-flag">🇹🇷</span>
+            <span class="language-flag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"
+                style="width: 24px; height: 16px; border-radius: 2px; display: block;">
+                <rect width="1200" height="800" fill="#E30A17" />
+                <circle cx="444" cy="400" r="240" fill="#ffffff" />
+                <circle cx="472" cy="400" r="192" fill="#E30A17" />
+                <path fill="#ffffff" d="M583.334 400l183.333 59.574-113.334-155.992v192.836l113.334-155.992z" />
+              </svg>
+            </span>
           </button>
           <button id="themeBtn" class="theme-btn" title="Tema Değiştir">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -32,7 +42,9 @@
           <button id="settingsBtn" class="settings-btn" title="Filtre Ayarları">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+              <path
+                d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24">
+              </path>
             </svg>
           </button>
         </div>
@@ -44,7 +56,7 @@
       </div>
       <div class="last-update" id="lastUpdate"></div>
     </header>
-    
+
     <div class="filter-modal" id="filterModal" style="display: none;">
       <div class="filter-modal-overlay" id="filterModalOverlay"></div>
       <div class="filter-modal-content">
@@ -62,7 +74,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="calculator-modal" id="calculatorModal" style="display: none;">
       <div class="calculator-modal-overlay" id="calculatorModalOverlay"></div>
       <div class="calculator-modal-content">
@@ -83,7 +95,7 @@
               </select>
             </div>
           </div>
-          
+
           <div class="calculator-swap">
             <button id="swapBtn" class="swap-btn" title="Dövizleri değiştir">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -92,7 +104,7 @@
               </svg>
             </button>
           </div>
-          
+
           <div class="calculator-row">
             <div class="calculator-group">
               <label id="resultLabel">Sonuç</label>
@@ -105,20 +117,21 @@
               </select>
             </div>
           </div>
-          
+
           <div class="calculator-info" id="calculatorInfo">
             <small id="calculatorNote">* Kurlar TCMB'nin resmi verilerine göre hesaplanmaktadır.</small>
-            <small id="calculatorDate" style="display: block; margin-top: 6px; font-weight: 600; color: var(--primary-color);"></small>
+            <small id="calculatorDate"
+              style="display: block; margin-top: 6px; font-weight: 600; color: var(--primary-color);"></small>
           </div>
         </div>
       </div>
     </div>
-    
+
     <div class="loading" id="loading">
       <div class="spinner"></div>
       <p>Kurlar yükleniyor...</p>
     </div>
-    
+
     <div class="search-export-container" id="searchContainer" style="display: none;">
       <div class="search-container">
         <input type="text" id="searchInput" class="search-input" placeholder="Döviz ara (ör: USD, Euro, Dolar...)">
@@ -132,7 +145,7 @@
         <span class="export-text">Excel</span>
       </button>
     </div>
-    
+
     <div class="table-container">
       <table class="rates-table" id="ratesTable" style="display: none;">
         <thead>
@@ -146,12 +159,12 @@
         </tbody>
       </table>
     </div>
-    
+
     <div class="error" id="error" style="display: none;">
       <p>Kurlar yüklenirken bir hata oluştu.</p>
       <button id="retryBtn">Tekrar Dene</button>
     </div>
-    
+
     <footer>
       <div class="footer-content">
         <span class="footer-name">Kadirify</span>
@@ -160,10 +173,10 @@
       </div>
     </footer>
   </div>
-  
+
   <script src="languages.js"></script>
   <script src="xlsx.min.js"></script>
   <script src="popup.js"></script>
 </body>
-</html>
 
+</html>

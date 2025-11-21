@@ -1,4 +1,4 @@
-(function() {
+(function () {
   'use strict';
 
   // ============================================================================
@@ -104,7 +104,7 @@
       try {
         const result = await this._storage.get([CONFIG.STORAGE_KEYS.SELECTED_CURRENCIES]);
         const currencies = result[CONFIG.STORAGE_KEYS.SELECTED_CURRENCIES];
-        
+
         if (Array.isArray(currencies)) {
           return new Set(currencies);
         }
@@ -122,8 +122,8 @@
 
       try {
         const currenciesArray = Array.from(selectedCurrencies);
-        await this._storage.set({ 
-          [CONFIG.STORAGE_KEYS.SELECTED_CURRENCIES]: currenciesArray 
+        await this._storage.set({
+          [CONFIG.STORAGE_KEYS.SELECTED_CURRENCIES]: currenciesArray
         });
         this._selectedCurrencies = new Set(selectedCurrencies);
         return true;
@@ -153,8 +153,8 @@
       }
 
       try {
-        await this._storage.set({ 
-          [CONFIG.STORAGE_KEYS.IS_INITIALIZED]: true 
+        await this._storage.set({
+          [CONFIG.STORAGE_KEYS.IS_INITIALIZED]: true
         });
         return true;
       } catch (error) {
@@ -189,7 +189,7 @@
       try {
         const result = await this._storage.get([CONFIG.STORAGE_KEYS.FAVORITE_CURRENCIES]);
         const favorites = result[CONFIG.STORAGE_KEYS.FAVORITE_CURRENCIES];
-        
+
         if (Array.isArray(favorites)) {
           return new Set(favorites);
         }
@@ -207,8 +207,8 @@
 
       try {
         const favoritesArray = Array.from(favoriteCurrencies);
-        await this._storage.set({ 
-          [CONFIG.STORAGE_KEYS.FAVORITE_CURRENCIES]: favoritesArray 
+        await this._storage.set({
+          [CONFIG.STORAGE_KEYS.FAVORITE_CURRENCIES]: favoritesArray
         });
         this._favoriteCurrencies = new Set(favoriteCurrencies);
         return true;
@@ -243,13 +243,13 @@
 
     async toggle(currencyCode) {
       const current = this._repository.getFavorites();
-      
+
       if (current.has(currencyCode)) {
         current.delete(currencyCode);
       } else {
         current.add(currencyCode);
       }
-      
+
       this._repository.setFavorites(current);
       await this._repository.save(current);
       return current;
@@ -293,36 +293,36 @@
 
     async initialize(currencies) {
       this.setCurrencies(currencies);
-      
+
       const isInitialized = await this._repository.isInitialized();
-      
+
       if (!isInitialized) {
         return await this._initializeFirstTime(currencies);
       }
-      
+
       return await this._loadExistingFilters(currencies);
     }
 
     async _initializeFirstTime(currencies) {
       const allCodes = new Set(currencies.map(c => c.code));
       this._repository.setSelected(allCodes);
-      
+
       await Promise.all([
         this._repository.save(allCodes),
         this._repository.markAsInitialized()
       ]);
-      
+
       return allCodes;
     }
 
     async _loadExistingFilters(currencies) {
       const savedFilters = await this._repository.load();
       const validCodes = new Set(currencies.map(c => c.code));
-      
+
       // Filter out invalid currency codes
       const filtered = Array.from(savedFilters).filter(code => validCodes.has(code));
       const filteredSet = new Set(filtered);
-      
+
       // If no valid filters or all were invalid, select all
       if (filteredSet.size === 0) {
         const allCodes = new Set(currencies.map(c => c.code));
@@ -330,14 +330,14 @@
         await this._repository.save(allCodes);
         return allCodes;
       }
-      
+
       this._repository.setSelected(filteredSet);
-      
+
       // Save if filters were modified
       if (filteredSet.size !== savedFilters.size) {
         await this._repository.save(filteredSet);
       }
-      
+
       return filteredSet;
     }
 
@@ -355,13 +355,13 @@
 
     async toggle(currencyCode) {
       const current = this._repository.getSelected();
-      
+
       if (current.has(currencyCode)) {
         current.delete(currencyCode);
       } else {
         current.add(currencyCode);
       }
-      
+
       this._repository.setSelected(current);
       await this._repository.save(current);
     }
@@ -373,20 +373,20 @@
     filter(currencies, searchTerm = '') {
       const selected = this._repository.getSelected();
       const term = searchTerm.toLowerCase().trim();
-      
+
       return currencies.filter(currency => {
         // Apply currency filter
         if (selected.size > 0 && !selected.has(currency.code)) {
           return false;
         }
-        
+
         // Apply search filter
         if (term) {
           const code = currency.code.toLowerCase();
           const name = currency.name.toLowerCase();
           return code.includes(term) || name.includes(term);
         }
-        
+
         return true;
       });
     }
@@ -417,7 +417,7 @@
       if (!languageService || languageService.getCurrentLanguage() === 'tr') {
         return this.originalName;
       }
-      
+
       const translations = languageService.t('currencyNames');
       return translations[this.originalName] || this.originalName;
     }
@@ -450,11 +450,11 @@
       if (!date) {
         return `${CONFIG.API_BASE_URL}/today.xml`;
       }
-      
+
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      
+
       return `${CONFIG.API_BASE_URL}/${year}${month}/${day}${month}${year}.xml`;
     }
 
@@ -511,7 +511,7 @@
   class ExportService {
     static exportToExcel(currencies, dateString = null, languageService = null) {
       const t = (key) => languageService ? languageService.t(key) : key;
-      
+
       if (!currencies || currencies.length === 0) {
         throw new Error(t('exportNoData'));
       }
@@ -547,7 +547,7 @@
       });
 
       const ws = XLSX.utils.aoa_to_sheet(data);
-      
+
       const wscols = [
         { wch: 12 },
         { wch: 25 },
@@ -573,8 +573,8 @@
       }
 
       const wb = XLSX.utils.book_new();
-      const sheetName = languageService && languageService.getCurrentLanguage() === 'en' 
-        ? 'CBRT Exchange Rates' 
+      const sheetName = languageService && languageService.getCurrentLanguage() === 'en'
+        ? 'CBRT Exchange Rates'
         : 'TCMB Döviz Kurları';
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
@@ -620,7 +620,11 @@
     }
 
     async toggle() {
-      const newLanguage = this._currentLanguage === 'tr' ? 'en' : 'tr';
+      const languages = ['tr', 'en', 'de', 'fr', 'es'];
+      const currentIndex = languages.indexOf(this._currentLanguage);
+      const nextIndex = (currentIndex + 1) % languages.length;
+      const newLanguage = languages[nextIndex];
+
       this.setLanguage(newLanguage);
       return newLanguage;
     }
@@ -842,7 +846,7 @@
 
       const favoriteIcon = isFavorite ? '★' : '☆';
       const favoriteClass = isFavorite ? 'favorite' : '';
-      const favoriteTitle = languageService 
+      const favoriteTitle = languageService
         ? (isFavorite ? languageService.t('removeFromFavorites') : languageService.t('addToFavorites'))
         : (isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle');
 
@@ -1035,7 +1039,7 @@
       const themeService = new ThemeService(storageService);
       const languageService = new LanguageService(storageService);
       const converterService = new ConverterService();
-      
+
       this._ui = new UIManager();
       this._filterService = filterService;
       this._favoriteService = favoriteService;
@@ -1043,7 +1047,7 @@
       this._languageService = languageService;
       this._converterService = converterService;
       this._lastUpdateData = null;
-      
+
       this._initialize();
     }
 
@@ -1065,21 +1069,21 @@
 
     _updateUITexts() {
       const t = (key) => this._languageService.t(key);
-      
+
       // Header
       document.querySelector('h1').textContent = t('title');
       document.querySelector('.date-label').textContent = t('dateLabel');
       this._ui.elements.todayBtn.textContent = t('todayBtn');
-      
+
       // Last Update (mevcut tarih varsa yeniden çevir)
       if (this._lastUpdateData) {
         const { dateString, isToday } = this._lastUpdateData;
-        const displayMessage = isToday 
-          ? `${t('lastUpdate')} ${dateString}` 
+        const displayMessage = isToday
+          ? `${t('lastUpdate')} ${dateString}`
           : `${t('lastUpdate')} ${dateString} ${t('ratesNotPublished')}`;
         this._ui.updateLastUpdate(displayMessage);
       }
-      
+
       // Buttons
       if (this._ui.elements.themeBtn) {
         this._ui.elements.themeBtn.setAttribute('title', t('themeToggle'));
@@ -1100,11 +1104,28 @@
       if (this._ui.elements.languageBtn) {
         const langFlag = this._ui.elements.languageBtn.querySelector('.language-flag');
         if (langFlag) {
-          langFlag.textContent = this._languageService.getCurrentLanguage() === 'tr' ? '🇹🇷' : '🇬🇧';
+          const getFlagSvg = (lang) => {
+            const style = 'width: 24px; height: 16px; border-radius: 2px; display: block;';
+            switch (lang) {
+              case 'tr':
+                return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" style="${style}"><rect width="1200" height="800" fill="#E30A17"/><circle cx="444" cy="400" r="240" fill="#ffffff"/><circle cx="472" cy="400" r="192" fill="#E30A17"/><path fill="#ffffff" d="M583.334 400l183.333 59.574-113.334-155.992v192.836l113.334-155.992z"/></svg>`;
+              case 'en':
+                return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30" style="${style}"><clipPath id="s"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#s)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#t)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>`;
+              case 'de':
+                return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3" style="${style}"><rect width="5" height="3" y="0" x="0" fill="#000"/><rect width="5" height="2" y="1" x="0" fill="#D00"/><rect width="5" height="1" y="2" x="0" fill="#FFCE00"/></svg>`;
+              case 'fr':
+                return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2" style="${style}"><rect width="1" height="2" x="0" fill="#0055A4"/><rect width="1" height="2" x="1" fill="#FFF"/><rect width="1" height="2" x="2" fill="#EF4135"/></svg>`;
+              case 'es':
+                return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 500" style="${style}"><rect width="750" height="500" fill="#AA151B"/><rect width="750" height="250" y="125" fill="#F1BF00"/></svg>`;
+              default:
+                return '🇹🇷';
+            }
+          };
+          langFlag.innerHTML = getFlagSvg(this._languageService.getCurrentLanguage());
         }
         this._ui.elements.languageBtn.setAttribute('title', t('languageToggle'));
       }
-      
+
       // Calculator Modal
       const calculatorTitle = document.getElementById('calculatorTitle');
       const amountLabel = document.getElementById('amountLabel');
@@ -1121,35 +1142,35 @@
       if (this._ui.elements.swapBtn) {
         this._ui.elements.swapBtn.setAttribute('title', t('swapCurrencies'));
       }
-      
+
       // Update calculator date if modal is open
       if (document.getElementById('calculatorModal').style.display === 'block') {
         this._updateCalculatorDate();
       }
-      
+
       // Search
       this._ui.elements.searchInput.setAttribute('placeholder', t('searchPlaceholder'));
-      
+
       // Filter Modal
       document.querySelector('.filter-modal-header h2').textContent = t('filterModalTitle');
       this._ui.elements.selectAllBtn.textContent = t('selectAllBtn');
       this._ui.elements.deselectAllBtn.textContent = t('deselectAllBtn');
-      
+
       // Table Headers
       const headers = document.querySelectorAll('.rates-table th');
       if (headers[0]) headers[0].textContent = t('currencyHeader');
       if (headers[1]) headers[1].textContent = t('buyingHeader');
       if (headers[2]) headers[2].textContent = t('sellingHeader');
-      
+
       // Error
       const errorP = document.querySelector('.error p');
       if (errorP) errorP.textContent = t('errorMessage');
       this._ui.elements.retryBtn.textContent = t('retryBtn');
-      
+
       // Loading
       const loadingP = document.querySelector('.loading p');
       if (loadingP) loadingP.textContent = t('loading');
-      
+
       // Footer
       const footerBy = document.getElementById('footerBy');
       const footerDeveloped = document.getElementById('footerDeveloped');
@@ -1306,23 +1327,23 @@
         await this._filterService.initialize(sortedData);
         FilterRenderer.renderCheckboxes(sortedData, this._filterService, () => this._applyFilters());
 
-        const dateAttr = todayXml.querySelector('Tarih_Date')?.getAttribute('Tarih') || 
-                         todayXml.querySelector('Tarih_Date')?.getAttribute('Date');
-        const formattedDate = DateFormatter.formatTcmbDate(dateAttr) || 
-                             new Date().toLocaleDateString('tr-TR', {
-                               day: '2-digit',
-                               month: 'long',
-                               year: 'numeric'
-                             });
+        const dateAttr = todayXml.querySelector('Tarih_Date')?.getAttribute('Tarih') ||
+          todayXml.querySelector('Tarih_Date')?.getAttribute('Date');
+        const formattedDate = DateFormatter.formatTcmbDate(dateAttr) ||
+          new Date().toLocaleDateString('tr-TR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+          });
 
         const isToday = this._isToday(dateAttr);
         const t = (key) => this._languageService.t(key);
-        
+
         // Tarih verisini sakla (dil değiştirirken kullanmak için)
         this._lastUpdateData = { dateString: formattedDate, isToday };
-        
-        const displayMessage = isToday 
-          ? `${t('lastUpdate')} ${formattedDate}` 
+
+        const displayMessage = isToday
+          ? `${t('lastUpdate')} ${formattedDate}`
           : `${t('lastUpdate')} ${formattedDate} ${t('ratesNotPublished')}`;
 
         this._ui.updateLastUpdate(displayMessage);
@@ -1343,8 +1364,8 @@
       const allCurrencies = this._filterService.getAllCurrencies();
       const filtered = this._filterService.filter(allCurrencies, searchTerm);
       CurrencyRenderer.renderTable(
-        filtered, 
-        this._ui.elements.currencies, 
+        filtered,
+        this._ui.elements.currencies,
         this._favoriteService,
         () => this._applyFilters(),
         this._languageService
@@ -1354,16 +1375,16 @@
 
     _isToday(tcmbDate) {
       if (!tcmbDate) return false;
-      
+
       const parts = tcmbDate.split('.');
       if (parts.length !== 3) return false;
-      
+
       const [day, month, year] = parts.map(p => parseInt(p, 10));
       const today = new Date();
-      
-      return day === today.getDate() && 
-             month === (today.getMonth() + 1) && 
-             year === today.getFullYear();
+
+      return day === today.getDate() &&
+        month === (today.getMonth() + 1) &&
+        year === today.getFullYear();
     }
 
     _exportData() {
@@ -1372,7 +1393,7 @@
         const allCurrencies = this._filterService.getAllCurrencies();
         const filtered = this._filterService.filter(allCurrencies, searchTerm);
         const t = (key) => this._languageService.t(key);
-        
+
         if (filtered.length === 0) {
           alert(t('exportNoData'));
           return;
@@ -1396,7 +1417,7 @@
     _updateCalculatorDate() {
       const t = (key) => this._languageService.t(key);
       const calculatorDateEl = document.getElementById('calculatorDate');
-      
+
       if (calculatorDateEl && this._lastUpdateData && this._lastUpdateData.dateString) {
         calculatorDateEl.textContent = `${t('cbrtRateDate')} ${this._lastUpdateData.dateString}`;
       }
@@ -1405,32 +1426,32 @@
     _populateCurrencySelects() {
       const currencies = this._converterService.getAvailableCurrencies();
       const t = (key) => this._languageService.t('currencyNames.' + key) || key;
-      
+
       const fromSelect = this._ui.elements.fromCurrency;
       const toSelect = this._ui.elements.toCurrency;
-      
+
       fromSelect.innerHTML = '';
       toSelect.innerHTML = '';
-      
+
       currencies.forEach(currency => {
-        const displayName = currency.code === 'TRY' 
-          ? currency.name 
-          : this._languageService.getCurrentLanguage() === 'en' 
+        const displayName = currency.code === 'TRY'
+          ? currency.name
+          : this._languageService.getCurrentLanguage() === 'en'
             ? t(currency.name) || currency.name
             : currency.name;
-        
+
         const option1 = document.createElement('option');
         option1.value = currency.code;
         option1.textContent = `${currency.code}${currency.unit > 1 ? ` (${currency.unit})` : ''} - ${displayName}`;
-        
+
         const option2 = document.createElement('option');
         option2.value = currency.code;
         option2.textContent = `${currency.code}${currency.unit > 1 ? ` (${currency.unit})` : ''} - ${displayName}`;
-        
+
         fromSelect.appendChild(option1);
         toSelect.appendChild(option2);
       });
-      
+
       fromSelect.value = 'TRY';
       toSelect.value = 'USD';
     }
@@ -1440,7 +1461,7 @@
         const amount = parseFloat(this._ui.elements.amountInput.value) || 0;
         const fromCode = this._ui.elements.fromCurrency.value;
         const toCode = this._ui.elements.toCurrency.value;
-        
+
         const result = this._converterService.convert(amount, fromCode, toCode);
         this._ui.elements.resultInput.value = result.toFixed(4).replace('.', ',');
       } catch (error) {
@@ -1452,10 +1473,10 @@
     _swapCurrencies() {
       const fromValue = this._ui.elements.fromCurrency.value;
       const toValue = this._ui.elements.toCurrency.value;
-      
+
       this._ui.elements.fromCurrency.value = toValue;
       this._ui.elements.toCurrency.value = fromValue;
-      
+
       this._calculate();
     }
   }

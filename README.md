@@ -237,7 +237,7 @@ Kullanıcı belirli bir dövizi arıyor. Arama kutusuna döviz kodunu yazarak an
 - [x] Dark mode
 - [x] Döviz çevirici (calculator)
 - [ ] Kur alarm sistemi
-- [ ] Daha fazla dil desteği (DE, FR, ES)
+- [x] Daha fazla dil desteği (DE, FR, ES)
 
 ## 📄 Lisans
 
