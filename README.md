@@ -1,6 +1,8 @@
 # TCMB Döviz Kurları Chrome Extension
 
 Türkiye Cumhuriyet Merkez Bankası (TCMB) döviz kurlarını gerçek zamanlı olarak takip etmenizi sağlayan, hafif ve kullanıcı dostu bir Chrome tarayıcı eklentisi.
+## Google Web Mağazası
+https://chromewebstore.google.com/detail/tcmb-d%C3%B6viz-kurlar%C4%B1/dkihcfnkdbncdmbolhgghfkmmnlkhnif
 
 ## 🎯 Proje Amacı
 
@@ -256,3 +258,4 @@ Bu proje kişisel kullanım amaçlıdır. TCMB verileri resmi API üzerinden al�
 ---
 
 **Not**: Bu eklenti resmi bir TCMB ürünü değildir. Veriler TCMB'nin resmi API'sinden alınmakta olup, eklenti bağımsız bir geliştirici tarafından oluşturulmuştur.
+
